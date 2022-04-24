@@ -1,0 +1,21 @@
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\obj\Debug\TestApllication.MainForm.resources
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\obj\Debug\TestApllication.Properties.Resources.resources
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\obj\Debug\TestApllication.csproj.GenerateResource.Cache
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\bin\Debug\TestApllication.exe
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\bin\Debug\TestApllication.pdb
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\obj\Debug\TestApllication.layout.LicenseItem.resources
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\obj\Debug\TestApllication.layout.LoginItem.resources
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\obj\Debug\TestApllication.exe
+d:\Project\Untilities\Neo4J_Tool_SQL\TestApllication\TestApllication\obj\Debug\TestApllication.pdb
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.csproj.AssemblyReference.cache
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.layout.LicenseItem.resources
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.layout.LoginItem.resources
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.MainForm.resources
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.Properties.Resources.resources
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.csproj.GenerateResource.cache
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.csproj.CoreCompileInputs.cache
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.exe
+E:\Data\Work\C# Solution\TestApllication\TestApllication\obj\Debug\TestApllication.pdb
+E:\Data\Work\C# Solution\TestApllication\TestApllication\bin\Debug\TestApllication.exe
+E:\Data\Work\C# Solution\TestApllication\TestApllication\bin\Debug\TestApllication.pdb
+E:\Data\Work\C# Solution\TestApllication\TestApllication\bin\Debug\TestApllication.exe.config
