@@ -12,7 +12,7 @@ namespace TestApllication.network
 
 		public string UserUrl { get; set; }
 		public string UserID { get; set; }
-		public string Password { get; set; }
+		//public string Password { get; set; }
 
 		public ConfigObjectDAO ConfigObjectDAO { get; set; }
 
@@ -24,7 +24,7 @@ namespace TestApllication.network
 			{
 				UserUrl = other.UserUrl;
 				UserID = other.UserID;
-				Password = other.Password;
+				//Password = other.Password;
 				ConfigObjectDAO = other.ConfigObjectDAO;
 			}
 		}

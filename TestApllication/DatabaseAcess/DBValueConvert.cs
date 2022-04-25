@@ -22,6 +22,11 @@ namespace TestApllication.DatabaseAcess
 			return value;
 		}
 
+		public static object ToNvarchar(bool value)
+		{
+			return value? "1" : "0";
+		}
+
 		public static object ToDateTime(string value)
 		{
 			return ToDateTime(value, DateTimeType.Date);

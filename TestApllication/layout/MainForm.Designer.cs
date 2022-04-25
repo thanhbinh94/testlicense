@@ -31,7 +31,7 @@ namespace TestApllication
 		/// </summary>
 		private void InitializeComponent()
 		{
-            this.loginItem1 = new TestApllication.layout.LoginItem(session);
+            this.loginItem1 = new TestApllication.layout.LoginItem();
             this.licenseItem1 = new TestApllication.layout.LicenseItem();
             this.SuspendLayout();
             // 
@@ -41,6 +41,8 @@ namespace TestApllication
             this.loginItem1.Name = "loginItem1";
             this.loginItem1.Size = new System.Drawing.Size(621, 357);
             this.loginItem1.TabIndex = 0;
+            this.loginItem1.btnLogin.Click += new System.EventHandler(this.btnLogin_Click);
+            this.loginItem1.btnCreateAcc.Click += new System.EventHandler(this.btnCreateAcc_Click);
             // 
             // licenseItem1
             // 

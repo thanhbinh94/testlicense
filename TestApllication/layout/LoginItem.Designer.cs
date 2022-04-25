@@ -30,8 +30,8 @@
 		{
             this.panel1 = new System.Windows.Forms.Panel();
             this.label3 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
-            this.txtLogin = new System.Windows.Forms.Button();
+            this.btnCreateAcc = new System.Windows.Forms.Button();
+            this.btnLogin = new System.Windows.Forms.Button();
             this.txtInpPass = new System.Windows.Forms.TextBox();
             this.txtInpUserId = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
@@ -42,8 +42,8 @@
             // panel1
             // 
             this.panel1.Controls.Add(this.label3);
-            this.panel1.Controls.Add(this.button1);
-            this.panel1.Controls.Add(this.txtLogin);
+            this.panel1.Controls.Add(this.btnCreateAcc);
+            this.panel1.Controls.Add(this.btnLogin);
             this.panel1.Controls.Add(this.txtInpPass);
             this.panel1.Controls.Add(this.txtInpUserId);
             this.panel1.Controls.Add(this.label2);
@@ -64,22 +64,21 @@
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(327, 228);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(91, 23);
-            this.button1.TabIndex = 5;
-            this.button1.Text = "Create account";
-            this.button1.UseVisualStyleBackColor = true;
+            this.btnCreateAcc.Location = new System.Drawing.Point(327, 228);
+            this.btnCreateAcc.Name = "button1";
+            this.btnCreateAcc.Size = new System.Drawing.Size(91, 23);
+            this.btnCreateAcc.TabIndex = 5;
+            this.btnCreateAcc.Text = "Create account";
+            this.btnCreateAcc.UseVisualStyleBackColor = true;
             // 
             // txtLogin
             // 
-            this.txtLogin.Location = new System.Drawing.Point(187, 228);
-            this.txtLogin.Name = "txtLogin";
-            this.txtLogin.Size = new System.Drawing.Size(91, 23);
-            this.txtLogin.TabIndex = 4;
-            this.txtLogin.Text = "Login";
-            this.txtLogin.UseVisualStyleBackColor = true;
-            this.txtLogin.Click += new System.EventHandler(this.txtLogin_Click);
+            this.btnLogin.Location = new System.Drawing.Point(187, 228);
+            this.btnLogin.Name = "txtLogin";
+            this.btnLogin.Size = new System.Drawing.Size(91, 23);
+            this.btnLogin.TabIndex = 4;
+            this.btnLogin.Text = "Login";
+            this.btnLogin.UseVisualStyleBackColor = true;
             // 
             // txtInpPass
             // 
@@ -129,12 +128,12 @@
 		#endregion
 
 		private System.Windows.Forms.Panel panel1;
-		private System.Windows.Forms.Button txtLogin;
-		private System.Windows.Forms.TextBox txtInpPass;
-		private System.Windows.Forms.TextBox txtInpUserId;
+		public System.Windows.Forms.Button btnLogin;
+        public System.Windows.Forms.TextBox txtInpPass;
+        public System.Windows.Forms.TextBox txtInpUserId;
 		private System.Windows.Forms.Label label2;
 		private System.Windows.Forms.Label label1;
-		private System.Windows.Forms.Button button1;
+        public System.Windows.Forms.Button btnCreateAcc;
 		private System.Windows.Forms.Label label3;
 	}
 }

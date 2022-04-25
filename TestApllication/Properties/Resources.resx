@@ -138,6 +138,12 @@
   <data name="MSG_ERR_005" xml:space="preserve">
     <value>Đăng nhập thất bại: Hãy nhập tài khoản/Mật khẩu</value>
   </data>
+  <data name="MSG_ERR_006" xml:space="preserve">
+    <value>Đăng nhập thất bại: Có lỗi phát sinh khi tạo tài khoản</value>
+  </data>
+  <data name="MSG_ERR_007" xml:space="preserve">
+    <value>Tạo tài khoản thất bại: Hãy nhập tài khoản/Mật khẩu</value>
+  </data>
   <data name="Schema" xml:space="preserve">
     <value>dbo</value>
   </data>

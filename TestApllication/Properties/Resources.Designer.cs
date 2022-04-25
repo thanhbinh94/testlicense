@@ -124,6 +124,24 @@ namespace TestApllication.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Đăng nhập thất bại: Có lỗi phát sinh khi tạo tài khoản.
+        /// </summary>
+        internal static string MSG_ERR_006 {
+            get {
+                return ResourceManager.GetString("MSG_ERR_006", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tạo tài khoản thất bại: Hãy nhập tài khoản/Mật khẩu.
+        /// </summary>
+        internal static string MSG_ERR_007 {
+            get {
+                return ResourceManager.GetString("MSG_ERR_007", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to dbo.
         /// </summary>
         internal static string Schema {
