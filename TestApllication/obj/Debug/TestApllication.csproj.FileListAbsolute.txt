@@ -31,3 +31,6 @@ E:\Data\Work\C# Solution\TestApllication\testlicense\TestApllication\obj\Debug\T
 E:\Data\Work\C# Solution\TestApllication\testlicense\TestApllication\bin\Debug\TestApllication.exe.config
 E:\Data\Work\C# Solution\TestApllication\testlicense\TestApllication\bin\Debug\TestApllication.exe
 E:\Data\Work\C# Solution\TestApllication\testlicense\TestApllication\bin\Debug\TestApllication.pdb
+D:\Project\Untilities\testlicense\TestApllication\bin\Debug\TestApllication.exe.config
+D:\Project\Untilities\testlicense\TestApllication\obj\Debug\TestApllication.exe
+D:\Project\Untilities\testlicense\TestApllication\obj\Debug\TestApllication.pdb

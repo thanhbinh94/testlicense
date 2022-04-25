@@ -2,6 +2,8 @@
 using System.Text;
 using System.Data.SqlClient;
 using System.Data;
+using System.Collections;
+using System.Collections.Generic;
 using TestApllication.Properties;
 using TestApllication.util;
 using TestApllication.DAO;
@@ -30,10 +32,8 @@ namespace TestApllication.DatabaseAcess
 					SqlDataReader dr = cm.ExecuteReader();
 					if (dr.Read())
 					{
-						dt.Columns.Add("USER_ID");
-						dt.Columns.Add("LICENSE_KEY");
-						dt.Columns.Add("USED_END_DATE");
-						dt.Columns.Add("IS_EXPIRED");
+						dt = MakeDataTableLogin();
+
 						dt.BeginInit();
 						DataRow dRow = dt.NewRow();
 						dRow["USER_ID"] = dr["USER_ID"].ToString();
@@ -63,7 +63,7 @@ namespace TestApllication.DatabaseAcess
 								dt.BeginLoadData();
 								dt.Rows[0]["LICENSE_KEY"] = dr3["LICENSE_KEY"].ToString();
 								dt.Rows[0]["IS_EXPIRED"] = dr3["IS_EXPIRED"].ToString();
-								dt.Rows[0]["USED_END_DATE"] = dr3["USED_END_DATE"].ToString();
+								dt.Rows[0]["USED_END_DATE"] = (DateTime)dr3["USED_END_DATE"];
 								dt.EndLoadData();
 								dt.AcceptChanges();
 							}
@@ -86,85 +86,10 @@ namespace TestApllication.DatabaseAcess
 			}
 		}
 
-		public static bool CreateAccount(string useID, string password, ConfigObjectDAO configObjectDAO, out string msgErr)
-		{
-			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
-			{
-				msgErr = string.Empty;
-				string loginQuery = CheckUserExistsQuery();
-
-				cn.Open();
-				SqlCommand cm = new SqlCommand(loginQuery, cn);
-				cm.CommandTimeout = 120;
-				cm.Parameters.Add("@userid", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(useID);
-
-				try
-				{
-                    #region Create user
-                    SqlDataReader dr = cm.ExecuteReader();
-					if (dr.Read())
-					{
-						msgErr = Resources.MSG_ERR_003;
-						return false;
-					}
-
-					string createUserQuery = CreateUserQuery();
-					cm = new SqlCommand(createUserQuery, cn);
-					cm.CommandTimeout = 120;
-					cm.Parameters.Add("@userid", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(useID);
-					cm.Parameters.Add("@password", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(password);
-					cm.Parameters.Add("@passwordhash", SqlDbType.NVarChar, 500).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(password));
-
-					cm.ExecuteNonQuery();
-                    #endregion
-
-                    #region Create license
-                    string licenseKeyGen = GenerateLicenseKey(configObjectDAO);
-					string licenseTypeId = GetLicenseTypeId(cn);
-
-					string createLicenseQuery = CreateLicenseQuery();
-					cm = new SqlCommand(createLicenseQuery, cn);
-					cm.CommandTimeout = 120;
-					cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKeyGen);
-					cm.Parameters.Add("@licenseType", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseTypeId);
-					cm.Parameters.Add("@isUsed", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(true);
-					cm.Parameters.Add("@usedStartDate", SqlDbType.NVarChar, 30).Value = DateTime.Now;
-					cm.Parameters.Add("@usedEndDate", SqlDbType.NVarChar, 30).Value = DateTimeUtil.AddDateTime(configObjectDAO.ConfigTrialDueDays);
-					cm.Parameters.Add("@isExpired", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(false);
-
-					cm.ExecuteNonQuery();
-					#endregion
-
-					#region Create user-license mapping
-					string createUserLicenseMapppingQuery = CreateUserLicenseMappingQuery();
-					cm = new SqlCommand(createUserLicenseMapppingQuery, cn);
-					cm.CommandTimeout = 120;
-					cm.Parameters.Add("@userIdHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(licenseKeyGen));
-					cm.Parameters.Add("@licenseKeyHash", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(licenseKeyGen));
-					// Hardcode
-					cm.Parameters.Add("@hashKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar("127.0.0.1");
-
-					cm.ExecuteNonQuery();
-					#endregion
-
-					return true;
-				}
-				catch (SqlException)
-				{
-					msgErr = Resources.MSG_ERR_004;
-					return false;
-				}
-				finally
-				{
-					cn.Close();
-				}
-			}
-		}
-
-		public static string GetLicenseTypeId(SqlConnection cn)
+		public static string GetLicenseTypeId(SqlConnection cn, SqlTransaction str)
         {
 			string GetLicenseTypeIDQuery = GetLicenseTypeByTrialQuery();
-			SqlCommand cm = new SqlCommand(GetLicenseTypeIDQuery, cn);
+			SqlCommand cm = new SqlCommand(GetLicenseTypeIDQuery, cn, str);
 			cm.CommandTimeout = 120;
 			cm.Parameters.Add("@isTrial", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(true);
 			try
@@ -174,7 +99,7 @@ namespace TestApllication.DatabaseAcess
 				{
 					return dr["LICENSE_TYPE_ID"].ToString();
 				}
-
+				dr.Close();
 				return string.Empty;
 			}
 			catch (SqlException)
@@ -205,7 +130,7 @@ namespace TestApllication.DatabaseAcess
 						configObjectDAO.ConfigNumberOfUnit = int.Parse(dr["CONFIG_NUM_UNIT"].ToString());
 						configObjectDAO.ConfigLicenseSuffix = dr["CONFIG_LICENSE_SUFFIX"].ToString();
 					}
-
+					dr.Close();
 					return configObjectDAO;
 				}
 				catch (SqlException)
@@ -218,14 +143,231 @@ namespace TestApllication.DatabaseAcess
 				}
 			}
 		}
+
+		public static List<LicenseTypeItemDAO> GetLicenseTypeForDropdown() 
+		{
+			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
+			{
+				List<LicenseTypeItemDAO> listLicenseTypeDrop = new List<LicenseTypeItemDAO>();
+				string getLicenseTypeForDrop = GetLicenseTypeForDropdownQuery();
+
+				cn.Open();
+				SqlCommand cm = new SqlCommand(getLicenseTypeForDrop, cn);
+				cm.CommandTimeout = 120;
+
+				try
+				{
+					SqlDataReader dr = cm.ExecuteReader();
+					while (dr.Read())
+					{
+						LicenseTypeItemDAO itemDAO = new LicenseTypeItemDAO();
+						itemDAO.LicenseTypeId = dr["LICENSE_TYPE_ID"].ToString();
+						itemDAO.Description = dr["DESCRIPTION"].ToString();
+						listLicenseTypeDrop.Add(itemDAO);
+					}
+					dr.Close();
+					return listLicenseTypeDrop;
+				}
+				catch (SqlException)
+				{
+					return new List<LicenseTypeItemDAO>();
+				}
+				finally
+				{
+					cn.Close();
+				}
+			}
+		}
+
+		public static bool CreateAccount(string useID, string password, ConfigObjectDAO configObjectDAO, out string msgErr)
+		{
+			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
+			{
+				msgErr = string.Empty;
+				string loginQuery = CheckUserExistsQuery();
+
+				cn.Open();
+				SqlCommand cm = new SqlCommand(loginQuery, cn);
+				SqlTransaction str = cn.BeginTransaction();
+				cm.CommandTimeout = 120;
+				cm.Parameters.Add("@userid", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(useID);
+
+				try
+				{
+					#region Check exist
+					SqlDataReader dr = cm.ExecuteReader();
+					if (dr.Read())
+					{
+						msgErr = Resources.MSG_ERR_003;
+						return false;
+					}
+					#endregion
+
+					#region Create user
+					string createUserQuery = CreateUserQuery();
+					cm = new SqlCommand(createUserQuery, cn, str);
+					cm.CommandTimeout = 120;
+					cm.Parameters.Add("@userid", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(useID);
+					cm.Parameters.Add("@password", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(password);
+					cm.Parameters.Add("@passwordhash", SqlDbType.NVarChar, 500).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(password));
+
+					cm.ExecuteNonQuery();
+					#endregion
+
+					#region Create license
+					string licenseKeyGen = GenerateLicenseKey(configObjectDAO);
+					string licenseTypeId = GetLicenseTypeId(cn, str);
+
+					string createLicenseQuery = CreateLicenseQuery();
+					cm = new SqlCommand(createLicenseQuery, cn, str);
+					cm.CommandTimeout = 120;
+					cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKeyGen);
+					cm.Parameters.Add("@licenseType", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseTypeId);
+					cm.Parameters.Add("@isUsed", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(true);
+					cm.Parameters.Add("@usedStartDate", SqlDbType.NVarChar, 30).Value = DateTime.Now;
+					cm.Parameters.Add("@usedEndDate", SqlDbType.NVarChar, 30).Value = DateTimeUtil.AddDateTime(configObjectDAO.ConfigTrialDueDays);
+					cm.Parameters.Add("@isExpired", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(false);
+
+					cm.ExecuteNonQuery();
+					#endregion
+
+					#region Create user-license mapping
+					string createUserLicenseMapppingQuery = CreateUserLicenseMappingQuery();
+					string[] infoArr = new string[] { useID, licenseKeyGen, "127.0.0.1" };
+					cm = new SqlCommand(createUserLicenseMapppingQuery, cn, str);
+					cm.CommandTimeout = 120;
+					cm.Parameters.Add("@userIdHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(licenseKeyGen));
+					cm.Parameters.Add("@licenseKeyHash", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(licenseKeyGen));
+					// Hardcode
+					cm.Parameters.Add("@hashKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(string.Join("", infoArr)));
+
+					cm.ExecuteNonQuery();
+					#endregion
+
+					str.Commit();
+					dr.Close();
+					return true;
+				}
+				catch (SqlException)
+				{
+					str.Rollback();
+					msgErr = Resources.MSG_ERR_004;
+					return false;
+				}
+				finally
+				{
+					str.Dispose();
+					cn.Close();
+				}
+			}
+		}
+
+		public static bool CreateInputLicense(string useID, string licenseKey, string licenseTypeId, string tcp, out string msgErr)
+		{
+			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
+			{
+				msgErr = string.Empty;
+				string[] infoArr = new string[] { useID, licenseKey, tcp };
+				string getLicenseHash = GetLicenseHashQuery();
+
+				cn.Open();
+				SqlTransaction str = cn.BeginTransaction();
+				SqlCommand cm = new SqlCommand(getLicenseHash, cn, str);
+				cm.CommandTimeout = 120;
+				cm.Parameters.Add("@hashkey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(string.Join("", infoArr)));
+
+				try
+				{
+					#region Check exists
+					SqlDataReader dr = cm.ExecuteReader();
+					if (dr.Read())
+					{
+						msgErr = Resources.MSG_ERR_009;
+						return false;
+					}
+					#endregion
+
+					#region Create license
+					int dueDays = GetDueDaysByLicenseTypeId(licenseTypeId, cn, str, out msgErr);
+					if (!string.IsNullOrEmpty(msgErr))
+					{
+						return false;
+					}
+
+					string createLicenseQuery = CreateLicenseQuery();
+					cm = new SqlCommand(createLicenseQuery, cn, str);
+					cm.CommandTimeout = 120;
+					cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKey);
+					cm.Parameters.Add("@licenseType", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseTypeId);
+					cm.Parameters.Add("@isUsed", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(true);
+					cm.Parameters.Add("@usedStartDate", SqlDbType.NVarChar, 30).Value = DateTime.Now;
+					cm.Parameters.Add("@usedEndDate", SqlDbType.NVarChar, 30).Value = DateTimeUtil.AddDateTime(dueDays);
+					cm.Parameters.Add("@isExpired", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(false);
+
+					cm.ExecuteNonQuery();
+					#endregion
+
+					#region Create user-license mapping
+					string createUserLicenseMapppingQuery = CreateUserLicenseMappingQuery();
+					cm = new SqlCommand(createUserLicenseMapppingQuery, cn, str);
+					cm.CommandTimeout = 120;
+					cm.Parameters.Add("@userIdHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(useID));
+					cm.Parameters.Add("@licenseKeyHash", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(licenseKey));
+					// Hardcode
+					cm.Parameters.Add("@hashKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(string.Join("", infoArr)));
+
+					cm.ExecuteNonQuery();
+					#endregion
+					dr.Close();
+					return true;
+				}
+				catch (SqlException)
+				{
+					str.Rollback();
+					msgErr = Resources.MSG_ERR_011;
+					return false;
+				}
+				finally
+				{
+					str.Dispose();
+					cn.Close();
+				}
+			}
+		}
+
+		public static int GetDueDaysByLicenseTypeId(string licenseType, SqlConnection cn, SqlTransaction str, out string msgErr)
+		{
+			string getDueDaysByLicenseTypeIdQuery = GetLicenseDueDaysQuery();
+			int value = -1;
+			msgErr = string.Empty;
+			SqlCommand cm = new SqlCommand(getDueDaysByLicenseTypeIdQuery, cn, str);
+			cm.CommandTimeout = 120;
+			cm.Parameters.Add("@licenseTypeID", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(licenseType);
+			try
+			{
+				SqlDataReader dr = cm.ExecuteReader();
+				if (dr.Read())
+				{
+					value = int.Parse(dr["LICENSE_DUE_DAYS"].ToString());
+				}
+				dr.Close();
+			}
+			catch (SqlException)
+			{
+				msgErr = Resources.MSG_ERR_010;
+				return value;
+			}
+			return value;
+		}
+
 		#endregion
 
 
-		#region Private method
+		#region Query
 		private static string LoginQuery()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append("SELECT USER_ID FROM ");
+			sb.Append("SELECT USER_ID, IS_TRIAL_MODE FROM ");
 			sb.Append(DBAccess.DBCommonSchema).Append(".[USER_INFORMATION] ");
 			sb.Append("WHERE USER_ID = @userid AND PASSWORD = @password");
 			return sb.ToString();
@@ -253,8 +395,26 @@ namespace TestApllication.DatabaseAcess
 		{
 			StringBuilder sb = new StringBuilder();
 			sb.Append("SELECT LICENSE_TYPE_ID FROM ");
-			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE] ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE_TYPE] ");
 			sb.Append("WHERE IS_TRIAL = @isTrial");
+			return sb.ToString();
+		}
+
+		private static string GetLicenseTypeForDropdownQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("SELECT LICENSE_TYPE_ID, DESCRIPTION FROM ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE_TYPE] ");
+			sb.Append("WHERE IS_TRIAL = '0'");
+			return sb.ToString();
+		}
+
+		private static string GetHashKeyQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("SELECT HASH_KEY FROM ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[USER_LICENSE_MAPPING] ");
+			sb.Append("WHERE HASH_KEY = @hashkey");
 			return sb.ToString();
 		}
 
@@ -270,9 +430,18 @@ namespace TestApllication.DatabaseAcess
 		private static string GetConfigQuery()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append("SELECT TRIAL_DUE_DAYS, CONFIG_NUM_DIGIT_PER_UNIT, CONFIG_NUM_UNIT,  FROM ");
+			sb.Append("SELECT TRIAL_DUE_DAYS, CONFIG_NUM_DIGIT_PER_UNIT, CONFIG_NUM_UNIT, CONFIG_MAX_INPUT_TIMES FROM ");
 			sb.Append(DBAccess.DBCommonSchema).Append(".[CONFIG] ");
 			sb.Append("WHERE CONFIG_ID = @configID");
+			return sb.ToString();
+		}
+
+		private static string GetLicenseDueDaysQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("SELECT LICENSE_DUE_DAYS FROM ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE_TYPE] ");
+			sb.Append("WHERE LICENSE_TYPE_ID = @licenseTypeID");
 			return sb.ToString();
 		}
 
@@ -302,16 +471,54 @@ namespace TestApllication.DatabaseAcess
 			sb.Append("VALUES (@userIdHash, @licenseKeyHash, @hashKey, GETDATE())");
 			return sb.ToString();
 		}
+		#endregion
 
+		#region Private method
 		private static string GenerateLicenseKey(ConfigObjectDAO configObjectDAO)
 		{
 			StringBuilder sb = new StringBuilder();
 			for (int i = 0; i < configObjectDAO.ConfigNumberOfUnit; i++)
-            {
+			{
 				sb.Append(StringUtil.CreateRandomString(configObjectDAO.ConfigNumberDigitPerUnit)).Append(configObjectDAO.ConfigLicenseSuffix);
-            }
+			}
 
-            return sb.ToString();
+			return sb.ToString();
+		}
+
+		private static DataTable MakeDataTableLogin()
+		{
+			DataTable dt = new DataTable();
+
+			DataColumn dCol = new DataColumn();
+			dCol.DataType = Type.GetType("System.String");
+			dCol.ColumnName = "USER_ID";
+			dCol.MaxLength = 30;
+			dt.Columns.Add(dCol);
+
+			dCol = new DataColumn();
+			dCol.DataType = Type.GetType("System.String");
+			dCol.ColumnName = "IS_TRIAL_MODE";
+			dCol.MaxLength = 1;
+			dt.Columns.Add(dCol);
+
+			dCol = new DataColumn();
+			dCol.DataType = Type.GetType("System.String");
+			dCol.ColumnName = "LICENSE_KEY";
+			dCol.MaxLength = 30;
+			dt.Columns.Add(dCol);
+
+			dCol = new DataColumn();
+			dCol.DataType = Type.GetType("System.String");
+			dCol.ColumnName = "IS_EXPIRED";
+			dCol.MaxLength = 1;
+			dt.Columns.Add(dCol);
+
+			dCol = new DataColumn();
+			dCol.DataType = Type.GetType("System.DateTime");
+			dCol.ColumnName = "USED_END_DATE";
+			dt.Columns.Add(dCol);
+
+			return dt;
 		}
 		#endregion
 	}

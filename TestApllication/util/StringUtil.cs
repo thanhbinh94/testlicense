@@ -23,5 +23,14 @@ namespace TestApllication.util
 			}
 			return sb.ToString();
 		}
+
+		public static bool ToBoolValue(string value)
+		{
+			if (value != "0" && value != "1")
+			{
+				return false;
+			}
+			return value == "1";
+		}
 	}
 }

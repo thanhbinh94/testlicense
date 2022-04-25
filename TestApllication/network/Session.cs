@@ -12,6 +12,10 @@ namespace TestApllication.network
 
 		public string UserUrl { get; set; }
 		public string UserID { get; set; }
+		public bool IsTrialMode { get; set; }
+		public string LicenseKey { get; set; }
+		public bool IsExpired { get; set; }
+		public DateTime UsedEndDate { get; set; }
 		//public string Password { get; set; }
 
 		public ConfigObjectDAO ConfigObjectDAO { get; set; }
@@ -22,10 +26,14 @@ namespace TestApllication.network
 		{
 			if (other != null)
 			{
-				UserUrl = other.UserUrl;
-				UserID = other.UserID;
-				//Password = other.Password;
-				ConfigObjectDAO = other.ConfigObjectDAO;
+				instance.UserUrl = other.UserUrl;
+				instance.UserID = other.UserID;
+				instance.IsTrialMode = other.IsTrialMode;
+				instance.LicenseKey = other.LicenseKey;
+				instance.IsExpired = other.IsExpired;
+				instance.UsedEndDate = other.UsedEndDate;
+				//instance.Password = other.Password;
+				instance.ConfigObjectDAO = other.ConfigObjectDAO;
 			}
 		}
 

@@ -16,5 +16,10 @@ namespace TestApllication.util
         {
             return date.AddDays(days);
         }
+
+		public static int GetDaysRemain(DateTime fromDate, DateTime toDate)
+		{
+			return (toDate - fromDate).Days;
+		}
     }
 }
