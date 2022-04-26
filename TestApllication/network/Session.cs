@@ -10,12 +10,13 @@ namespace TestApllication.network
 	{
 		private static Session instance;
 
-		public string UserUrl { get; set; }
+		public string UserIp { get; set; }
 		public string UserID { get; set; }
 		public bool IsTrialMode { get; set; }
 		public string LicenseKey { get; set; }
 		public bool IsExpired { get; set; }
 		public DateTime UsedEndDate { get; set; }
+		public bool IsLocked { get; set; }
 		//public string Password { get; set; }
 
 		public ConfigObjectDAO ConfigObjectDAO { get; set; }
@@ -26,7 +27,7 @@ namespace TestApllication.network
 		{
 			if (other != null)
 			{
-				instance.UserUrl = other.UserUrl;
+				instance.UserIp = other.UserIp;
 				instance.UserID = other.UserID;
 				instance.IsTrialMode = other.IsTrialMode;
 				instance.LicenseKey = other.LicenseKey;
@@ -34,6 +35,7 @@ namespace TestApllication.network
 				instance.UsedEndDate = other.UsedEndDate;
 				//instance.Password = other.Password;
 				instance.ConfigObjectDAO = other.ConfigObjectDAO;
+				instance.IsLocked = other.IsLocked;
 			}
 		}
 

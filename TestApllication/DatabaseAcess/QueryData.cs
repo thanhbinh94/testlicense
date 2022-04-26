@@ -129,6 +129,7 @@ namespace TestApllication.DatabaseAcess
 						configObjectDAO.ConfigNumberDigitPerUnit = int.Parse(dr["CONFIG_NUM_DIGIT_PER_UNIT"].ToString());
 						configObjectDAO.ConfigNumberOfUnit = int.Parse(dr["CONFIG_NUM_UNIT"].ToString());
 						configObjectDAO.ConfigLicenseSuffix = dr["CONFIG_LICENSE_SUFFIX"].ToString();
+						configObjectDAO.ConfigMaxInputTimes = int.Parse(dr["CONFIG_MAX_INPUT_TIMES"].ToString());
 					}
 					dr.Close();
 					return configObjectDAO;
@@ -262,13 +263,13 @@ namespace TestApllication.DatabaseAcess
 			}
 		}
 
-		public static bool CreateInputLicense(string useID, string licenseKey, string licenseTypeId, string tcp, out string msgErr)
+		public static bool CreateInputLicense(string userId, string licenseKey, string licenseTypeId, string ipAdress, out string msgErr)
 		{
 			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
 			{
 				msgErr = string.Empty;
-				string[] infoArr = new string[] { useID, licenseKey, tcp };
-				string getLicenseHash = GetLicenseHashQuery();
+				string[] infoArr = new string[] { userId, licenseKey, ipAdress };
+				string getLicenseHash = GetHashKeyQuery();
 
 				cn.Open();
 				SqlTransaction str = cn.BeginTransaction();
@@ -283,6 +284,7 @@ namespace TestApllication.DatabaseAcess
 					if (dr.Read())
 					{
 						msgErr = Resources.MSG_ERR_009;
+
 						return false;
 					}
 					#endregion
@@ -311,7 +313,7 @@ namespace TestApllication.DatabaseAcess
 					string createUserLicenseMapppingQuery = CreateUserLicenseMappingQuery();
 					cm = new SqlCommand(createUserLicenseMapppingQuery, cn, str);
 					cm.CommandTimeout = 120;
-					cm.Parameters.Add("@userIdHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(useID));
+					cm.Parameters.Add("@userIdHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(userId));
 					cm.Parameters.Add("@licenseKeyHash", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(licenseKey));
 					// Hardcode
 					cm.Parameters.Add("@hashKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(string.Join("", infoArr)));
@@ -332,6 +334,133 @@ namespace TestApllication.DatabaseAcess
 					str.Dispose();
 					cn.Close();
 				}
+			}
+		}
+
+		public static bool CreateBuyLicense(string userId, string licenseTypeId, ConfigObjectDAO configObjectDAO, string ipAdress, out string msgErr)
+		{
+			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
+			{
+				msgErr = string.Empty;
+
+				cn.Open();
+				SqlTransaction str = cn.BeginTransaction();
+				SqlCommand cm;
+
+				try
+				{
+					#region Create license
+					int dueDays = GetDueDaysByLicenseTypeId(licenseTypeId, cn, str, out msgErr);
+					if (!string.IsNullOrEmpty(msgErr))
+					{
+						return false;
+					}
+
+					string licenseKeyGen = GenerateLicenseKey(configObjectDAO);
+
+					string createLicenseQuery = CreateLicenseQuery();
+					cm = new SqlCommand(createLicenseQuery, cn, str);
+					cm.CommandTimeout = 120;
+					cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKeyGen);
+					cm.Parameters.Add("@licenseType", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseTypeId);
+					cm.Parameters.Add("@isUsed", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(true);
+					cm.Parameters.Add("@usedStartDate", SqlDbType.NVarChar, 30).Value = DateTime.Now;
+					cm.Parameters.Add("@usedEndDate", SqlDbType.NVarChar, 30).Value = DateTimeUtil.AddDateTime(dueDays);
+					cm.Parameters.Add("@isExpired", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(false);
+
+					cm.ExecuteNonQuery();
+					#endregion
+
+					#region Create user-license mapping
+					string createUserLicenseMapppingQuery = CreateUserLicenseMappingQuery();
+					cm = new SqlCommand(createUserLicenseMapppingQuery, cn, str);
+					string[] infoArr = new string[] { userId, licenseKeyGen, ipAdress };
+					cm.CommandTimeout = 120;
+					cm.Parameters.Add("@userIdHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(userId));
+					cm.Parameters.Add("@licenseKeyHash", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(licenseKeyGen));
+					// Hardcode
+					cm.Parameters.Add("@hashKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(EncryptUtil.EncryptStringToBase64(string.Join("", infoArr)));
+
+					cm.ExecuteNonQuery();
+					#endregion
+					str.Commit();
+					return true;
+				}
+				catch (SqlException)
+				{
+					str.Rollback();
+					msgErr = Resources.MSG_ERR_011;
+					return false;
+				}
+				finally
+				{
+					str.Dispose();
+					cn.Close();
+				}
+			}
+		}
+
+		public static int CheckInputTimesAndLock(string userId, string ipAdress, int maxInputTimes, ActionTypeEnum? actionType, out bool isLocked, out string msgErr)
+        {
+			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
+			{
+				isLocked = false;
+				msgErr = string.Empty;
+				cn.Open();
+				SqlTransaction str = cn.BeginTransaction();
+				int currentInputTimes = GetCurrentInputTimes(userId, ipAdress, cn, str, out msgErr);
+				if (currentInputTimes == maxInputTimes)
+                {
+					isLocked = true;
+					msgErr = Resources.MSG_LIC_INFO_003;
+					return -1;
+				}
+				if (actionType == ActionTypeEnum.ChangeInput)
+                {
+					try
+					{
+						if (currentInputTimes == 0)
+						{
+							string createInputLicense = CreateInputLicenseQuery();
+							SqlCommand cm = new SqlCommand(createInputLicense, cn, str);
+							cm.CommandTimeout = 120;
+							cm.Parameters.Add("@userId", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(userId);
+							cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(ipAdress);
+							cm.Parameters.Add("@inputTimes", SqlDbType.Int).Value = 1;
+							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = "1";
+
+							cm.ExecuteNonQuery();
+						}
+						else
+						{
+							string updateInputLicense = UpdateInputTimesAndLockedQuery();
+							SqlCommand cm = new SqlCommand(updateInputLicense, cn, str);
+							cm.CommandTimeout = 120;
+							currentInputTimes += 1;
+							cm.Parameters.Add("@userId", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(userId);
+							cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(ipAdress);
+							cm.Parameters.Add("@inputTimes", SqlDbType.Int).Value = currentInputTimes;
+							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = currentInputTimes == maxInputTimes ? "1" : "0";
+
+							cm.ExecuteNonQuery();
+							msgErr = Resources.MSG_LIC_INFO_003;
+							isLocked = true;
+							return -1;
+						}
+						str.Commit();
+					}
+					catch (SqlException)
+					{
+						msgErr = Resources.MSG_ERR_012;
+						return -1;
+					}
+                    finally
+                    {
+						str.Dispose();
+						cn.Close();
+                    }
+				}
+				return currentInputTimes;
 			}
 		}
 
@@ -360,6 +489,31 @@ namespace TestApllication.DatabaseAcess
 			return value;
 		}
 
+		public static int GetCurrentInputTimes(string userId, string ipAdress, SqlConnection cn, SqlTransaction str, out string msgErr)
+        {
+			string getInputTimes = GetInputTimesByUserAndIpQuery();
+			int value = 0;
+			msgErr = string.Empty;
+			SqlCommand cm = new SqlCommand(getInputTimes, cn, str);
+			cm.CommandTimeout = 120;
+			cm.Parameters.Add("@userId", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(userId);
+			cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(ipAdress);
+			try
+			{
+				SqlDataReader dr = cm.ExecuteReader();
+				if (dr.Read())
+				{
+					value = int.Parse(dr["INPUT_TIMES"].ToString());
+				}
+				dr.Close();
+			}
+			catch (SqlException)
+			{
+				msgErr = Resources.MSG_ERR_011;
+				return -1;
+			}
+			return value;
+		}
 		#endregion
 
 
@@ -445,6 +599,15 @@ namespace TestApllication.DatabaseAcess
 			return sb.ToString();
 		}
 
+		private static string GetInputTimesByUserAndIpQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("SELECT INPUT_TIMES FROM ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_TIMES] ");
+			sb.Append("WHERE USER_ID = @userId AND IP_ADDRESS = @ipAdress");
+			return sb.ToString();
+		}
+
 		private static string CreateUserQuery()
 		{
 			StringBuilder sb = new StringBuilder();
@@ -469,6 +632,26 @@ namespace TestApllication.DatabaseAcess
 			sb.Append("INSERT INTO ");
 			sb.Append(DBAccess.DBCommonSchema).Append(".[USER_LICENSE_MAPPING] ");
 			sb.Append("VALUES (@userIdHash, @licenseKeyHash, @hashKey, GETDATE())");
+			return sb.ToString();
+		}
+
+		private static string CreateInputLicenseQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("INSERT INTO ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_LICENSE] ");
+			sb.Append("VALUES (@userId, @ipAdress, @inputTimes, @isLocked)");
+			return sb.ToString();
+		}
+
+		private static string UpdateInputTimesAndLockedQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("UPDATE TABLE ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_LICENSE] ");
+			sb.Append("SET ");
+			sb.Append("INPUT_TIMES = @inputTimes, IS_LOCKED = @isLock ");
+			sb.Append("WHERE USER_ID = @userId AND IP_ADDRESS = @ipAdress");
 			return sb.ToString();
 		}
 		#endregion

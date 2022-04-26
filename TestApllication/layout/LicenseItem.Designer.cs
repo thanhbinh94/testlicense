@@ -23,7 +23,12 @@ namespace TestApllication.layout
 			set
 			{
 				session = new Session(value);
-				if (session.IsExpired)
+				if (session.IsLocked)
+                {
+					txtLicenseInp.Text = Resources.MSG_LIC_INFO_003;
+					pnBuy.Visible = false;
+				}
+				else if (session.IsExpired)
 				{
 					txtLicenseInp.Text = Resources.MSG_LIC_INFO_002;
 					pnBuy.Visible = false;

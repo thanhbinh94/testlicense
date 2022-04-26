@@ -18,24 +18,19 @@ namespace TestApllication
 	public partial class MainForm : Form
 	{
 		public ConfigObjectDAO configObjectDAO;
-		public enum ActionType
-        {
-			Login = 0,
-			CreateAccount = 1,
-        }
+
 		public MainForm()
 		{
 			InitializeComponent();
 			licenseItem1.Visible = false;
 			configObjectDAO = QueryData.GetConfigObject();
-			licenseItem1.OnClickBuy += btnInputLicense_Click;
 		}
 
         #region Event
         private void btnLogin_Click(object sender, EventArgs e)
 		{
 			string msgErr = string.Empty;
-			bool validate = ValidateDataLogin(ActionType.Login, out msgErr);
+			bool validate = ValidateDataLogin(ActionTypeEnum.Login, out msgErr);
 			if (!validate)
 			{
 				MessageBox.Show(msgErr);
@@ -51,14 +46,19 @@ namespace TestApllication
 			session = new Session();
 			session.UserID = dt.Rows[0]["USER_ID"].ToString();
 			// Hardcode
-			session.UserUrl = "127.0.0.1";
+			session.UserIp = "127.0.0.1";
 			session.ConfigObjectDAO = configObjectDAO;
+
+			bool isLocked = false;
+			int inputTime = QueryData.CheckInputTimesAndLock(session.UserID, session.UserIp, configObjectDAO.ConfigMaxInputTimes, null, out isLocked, out msgErr);
+			session.IsLocked = isLocked;
+			SwitchToMain(session);
 		}
 
 		private void btnCreateAcc_Click(object sender, EventArgs e)
 		{
 			string msgErr = string.Empty;
-			bool validate = ValidateDataLogin(ActionType.CreateAccount, out msgErr);
+			bool validate = ValidateDataLogin(ActionTypeEnum.CreateAccount, out msgErr);
 			if (!validate)
 			{
 				MessageBox.Show(msgErr);
@@ -85,6 +85,10 @@ namespace TestApllication
 			session.LicenseKey = dt.Rows[0]["LICENSE_KEY"].ToString();
 			session.UsedEndDate = (DateTime) dt.Rows[0]["USED_END_DATE"];
 			session.IsExpired = StringUtil.ToBoolValue(dt.Rows[0]["IS_EXPIRED"].ToString());
+			bool isLocked = false;
+			int inputTime = QueryData.CheckInputTimesAndLock(session.UserID, session.UserIp, configObjectDAO.ConfigMaxInputTimes, null, out isLocked, out msgErr);
+			session.IsLocked = isLocked;
+			SwitchToMain(session);
 		}
 
 		private void btnInputLicense_Click(object sender, EventArgs e)
@@ -97,44 +101,38 @@ namespace TestApllication
 				return;
 			}
 
-			int countInputTime;
-			bool inputLicense = QueryData.CreateInputLicense(session.UserID, licenseItem1.LicenseKeyInput, licenseItem1.LicenseKeyInput, session.UserUrl, out msgErr);
+			bool inputLicense = QueryData.CreateInputLicense(session.UserID, licenseItem1.LicenseKeyInput, licenseItem1.LicenseKeyInput, session.UserIp, out msgErr);
 			if (!inputLicense)
+			{
+				MessageBox.Show(msgErr);
+				bool isLocked = false;
+				int countInputTime = QueryData.CheckInputTimesAndLock(session.UserID, session.UserIp, configObjectDAO.ConfigMaxInputTimes, ActionTypeEnum.ChangeInput, out isLocked, out msgErr);
+				session.IsLocked = isLocked;
+				licenseItem1.Session = session;
+				return;
+			}
+		}
+
+		private void btnBuy_Click(object sender, EventArgs e)
+		{
+			string msgErr = string.Empty;
+
+			bool buyLicense = QueryData.CreateBuyLicense(session.UserID, licenseItem1.LicenseTypeChoose, configObjectDAO, session.UserIp, out msgErr);
+			if (!buyLicense)
 			{
 				MessageBox.Show(msgErr);
 				return;
 			}
-
-			//bool createAcc = QueryData.CreateAccount(loginItem1.txtInpUserId.Text, loginItem1.txtInpPass.Text, configObjectDAO, out msgErr);
-			//if (!createAcc)
-			//{
-			//	MessageBox.Show(msgErr);
-			//	return;
-			//}
-
-			//DataTable dt = new DataTable();
-			//bool loginCheck = QueryData.LoginCheck(loginItem1.txtInpUserId.Text, loginItem1.txtInpPass.Text, out dt, out msgErr);
-			//if (!loginCheck)
-			//{
-			//	MessageBox.Show(msgErr);
-			//	return;
-			//}
-			//session = new Session();
-			//session.UserID = dt.Rows[0]["USER_ID"].ToString();
-			//session.IsTrialMode = StringUtil.ToBoolValue(dt.Rows[0]["IS_TRIAL_MODE"].ToString());
-			//session.LicenseKey = dt.Rows[0]["LICENSE_KEY"].ToString();
-			//session.UsedEndDate = (DateTime)dt.Rows[0]["USED_END_DATE"];
-			//session.IsExpired = StringUtil.ToBoolValue(dt.Rows[0]["IS_EXPIRED"].ToString());
 		}
 		#endregion
 
 		#region private method
-		private bool ValidateDataLogin(ActionType actionType, out string msgErr)
+		private bool ValidateDataLogin(ActionTypeEnum actionType, out string msgErr)
 		{
 			msgErr = String.Empty;
 			if (string.IsNullOrEmpty(loginItem1.txtInpUserId.Text) || string.IsNullOrEmpty(loginItem1.txtInpPass.Text))
 			{
-				msgErr = (actionType == ActionType.Login)? Resources.MSG_ERR_005 : Resources.MSG_ERR_007;
+				msgErr = (actionType == ActionTypeEnum.Login)? Resources.MSG_ERR_005 : Resources.MSG_ERR_007;
 				return false;
 			}
 			return true;
@@ -155,18 +153,10 @@ namespace TestApllication
         {
 			loginItem1.Visible = false;
 			licenseItem1.Visible = true;
-			if (session.IsExpired)
-			{
-				licenseItem1.txtLicenseInp.Text = Resources.MSG_LIC_INFO_002;
-			}
-			else
-			{
-				DateTime today = DateTime.Today;
-				int dueDays = (session.UsedEndDate - today).Days;
-				licenseItem1.txtLicenseInp.Text = string.Format(Resources.MSG_LIC_INFO_001, dueDays.ToString());
-				
-			}
-        }
+			licenseItem1.OnClickInput += btnInputLicense_Click;
+			licenseItem1.OnClickBuy += btnInputLicense_Click;
+			licenseItem1.Session = session;
+		}
 
 		//private void GetIpAddress(out string userip)
 		//{

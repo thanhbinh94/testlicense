@@ -6,6 +6,7 @@
 		private int configNumberDigitPerUnit = 5;   // For generate license
 		private int configNumberOfUnit = 5;
 		private string configLicenseSuffix = "-";
+		private int maxInputTimes = 4;
 
 		public int ConfigTrialDueDays
 		{
@@ -52,6 +53,18 @@
 			set
 			{
 				configLicenseSuffix = value;
+			}
+		}
+
+		public int ConfigMaxInputTimes
+		{
+			get
+			{
+				return maxInputTimes;
+			}
+			set
+			{
+				maxInputTimes = value;
 			}
 		}
 	}

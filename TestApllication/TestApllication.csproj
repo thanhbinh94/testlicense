@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DAO\LicenseTypeItemDAO.cs" />
     <Compile Include="DatabaseAcess\DBAccess.cs" />
     <Compile Include="DatabaseAcess\DBValueConvert.cs" />
     <Compile Include="DatabaseAcess\QueryData.cs" />
@@ -69,6 +70,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="util\ActionTypeEnum.cs" />
     <Compile Include="util\DateTimeUtil.cs" />
     <Compile Include="util\EncryptUtil.cs" />
     <Compile Include="util\StringUtil.cs" />

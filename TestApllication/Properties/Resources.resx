@@ -156,11 +156,20 @@
   <data name="MSG_ERR_011" xml:space="preserve">
     <value>Đăng ký license thất bại: Lỗi không xác định</value>
   </data>
+  <data name="MSG_ERR_012" xml:space="preserve">
+    <value>Xảy ra lỗi không xác định</value>
+  </data>
+  <data name="MSG_ERR_013" xml:space="preserve">
+    <value>Mua license thất bại: Lỗi không xác định</value>
+  </data>
   <data name="MSG_LIC_INFO_001" xml:space="preserve">
     <value>License của bạn còn thời hạn trong {0} ngày</value>
   </data>
   <data name="MSG_LIC_INFO_002" xml:space="preserve">
     <value>License của bạn đã hết hạn</value>
+  </data>
+  <data name="MSG_LIC_INFO_003" xml:space="preserve">
+    <value>Tài khoản của bạn đã nhập quá số lần quy định và đã bị khóa</value>
   </data>
   <data name="Schema" xml:space="preserve">
     <value>dbo</value>
