@@ -23,13 +23,6 @@ namespace TestApllication.layout
 		public LicenseItem()
 		{
 			InitializeComponent();
-			//drpLicenseType.DataSource
-			listItemForDrop = QueryData.GetLicenseTypeForDropdown();
-			listItemForDrop.Sort();
-			drpLicenseType.DataSource = listItemForDrop;
-			drpLicenseType.DisplayMember = "Description";
-			drpLicenseType.ValueMember = "LicenseType";
-			drpLicenseType.SelectedItem = 0;
 		}
 
 		#region Event
@@ -41,6 +34,17 @@ namespace TestApllication.layout
 		private void btnBuy_Click(object sender, EventArgs e)
 		{
 			OnClickBuy?.Invoke(this, e);
+		}
+		#endregion
+
+		#region Private method
+		private void SetDataForLicenseTypeDrop()
+		{
+			listItemForDrop = QueryData.GetLicenseTypeForDropdown();
+			drpLicenseType.DisplayMember = "Description";
+			drpLicenseType.ValueMember = "LicenseType";
+			drpLicenseType.DataSource = listItemForDrop;
+			drpLicenseType.SelectedItem = 0;
 		}
 		#endregion
 	}

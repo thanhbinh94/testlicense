@@ -25,18 +25,19 @@ namespace TestApllication.layout
 				session = new Session(value);
 				if (session.IsLocked)
                 {
-					txtLicenseInp.Text = Resources.MSG_LIC_INFO_003;
+					lblLicenseStatus.Text = Resources.MSG_LIC_INFO_003;
 					pnBuy.Visible = false;
 				}
 				else if (session.IsExpired)
 				{
-					txtLicenseInp.Text = Resources.MSG_LIC_INFO_002;
-					pnBuy.Visible = false;
+					lblLicenseStatus.Text = Resources.MSG_LIC_INFO_002;
+					pnBuy.Visible = true;
+					SetDataForLicenseTypeDrop();
 				}
 				else
 				{
-					txtLicenseInp.Text = string.Format(Resources.MSG_LIC_INFO_001, DateTimeUtil.GetDaysRemain(DateTime.Today, session.UsedEndDate));
-					pnBuy.Visible = true;
+					lblLicenseStatus.Text = string.Format(Resources.MSG_LIC_INFO_001, DateTimeUtil.GetDaysRemain(DateTime.Today, session.UsedEndDate));
+					pnBuy.Visible = false;
 				}
 			}
 		}

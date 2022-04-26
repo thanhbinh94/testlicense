@@ -16,17 +16,13 @@ namespace TestApllication.util
 		/// </summary>
 		/// <param name="path">Image path</param>
 		/// <returns>Encrypted image</returns>
-		public static string EncryptStringToBase64(string input)
+		public static string EncryptASCIIStringToBase64(string input)
 		{
 			try
 			{
-				using (MemoryStream sr = new MemoryStream())
-				{
-					var sw = new StreamWriter(sr);
-					sw.Write(input);
-					byte[] inArray = sr.ToArray();
-					return Convert.ToBase64String(inArray);
-				}
+				byte[] byteEncodeArray = Encoding.ASCII.GetBytes(input);
+				string value = Convert.ToBase64String(byteEncodeArray);
+				return value;
 			}
 			catch (Exception)
 			{
@@ -34,13 +30,16 @@ namespace TestApllication.util
 			}
 		}
 
-		public static string DecryptStringFromBase64(string input)
+		public static string DecryptASCIIStringFromBase64(string input)
 		{
 			try
 			{
-				return Encoding.UTF8.GetString(Convert.FromBase64String(input));
+				string padded = input.PadRight(input.Length + (4 - input.Length % 4) % 4, '=');
+				byte[] byteDecodeArray = Convert.FromBase64String(padded);
+				string value = Encoding.ASCII.GetString(byteDecodeArray, 0, byteDecodeArray.Length);
+				return value;
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
 				return string.Empty;
 			}

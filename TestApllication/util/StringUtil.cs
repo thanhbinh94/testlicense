@@ -11,8 +11,7 @@ namespace TestApllication.util
 			StringBuilder sb = new StringBuilder();
 			var rand = new Random();
 
-			int random = rand.Next(1, length);
-			for (int i = 0; i < random; i++)
+			for (int i = 0; i < length; i++)
 			{
 				int randChar = rand.Next(0, 255);
 				while (randChar < 48 || (randChar > 57 && randChar < 65) || (randChar > 90 && randChar < 97) || randChar > 122)

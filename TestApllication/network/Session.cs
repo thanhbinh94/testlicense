@@ -27,15 +27,16 @@ namespace TestApllication.network
 		{
 			if (other != null)
 			{
-				instance.UserIp = other.UserIp;
-				instance.UserID = other.UserID;
-				instance.IsTrialMode = other.IsTrialMode;
-				instance.LicenseKey = other.LicenseKey;
-				instance.IsExpired = other.IsExpired;
-				instance.UsedEndDate = other.UsedEndDate;
-				//instance.Password = other.Password;
-				instance.ConfigObjectDAO = other.ConfigObjectDAO;
-				instance.IsLocked = other.IsLocked;
+				UserIp = other.UserIp;
+				UserID = other.UserID;
+				IsTrialMode = other.IsTrialMode;
+				LicenseKey = other.LicenseKey;
+				IsExpired = other.IsExpired;
+				UsedEndDate = other.UsedEndDate;
+				//Password = other.Password;
+				ConfigObjectDAO = other.ConfigObjectDAO;
+				IsLocked = other.IsLocked;
+				instance = other;
 			}
 		}
 

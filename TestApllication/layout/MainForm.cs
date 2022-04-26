@@ -47,6 +47,11 @@ namespace TestApllication
 			session.UserID = dt.Rows[0]["USER_ID"].ToString();
 			// Hardcode
 			session.UserIp = "127.0.0.1";
+			session.UserID = dt.Rows[0]["USER_ID"].ToString();
+			session.IsTrialMode = StringUtil.ToBoolValue(dt.Rows[0]["IS_TRIAL_MODE"].ToString());
+			session.LicenseKey = dt.Rows[0]["LICENSE_KEY"].ToString();
+			session.UsedEndDate = (DateTime)dt.Rows[0]["USED_END_DATE"];
+			session.IsExpired = StringUtil.ToBoolValue(dt.Rows[0]["IS_EXPIRED"].ToString());
 			session.ConfigObjectDAO = configObjectDAO;
 
 			bool isLocked = false;
@@ -81,6 +86,8 @@ namespace TestApllication
 			}
 			session = new Session();
 			session.UserID = dt.Rows[0]["USER_ID"].ToString();
+			// Hardcode
+			session.UserIp = "127.0.0.1";
 			session.IsTrialMode = StringUtil.ToBoolValue(dt.Rows[0]["IS_TRIAL_MODE"].ToString());
 			session.LicenseKey = dt.Rows[0]["LICENSE_KEY"].ToString();
 			session.UsedEndDate = (DateTime) dt.Rows[0]["USED_END_DATE"];
@@ -116,13 +123,16 @@ namespace TestApllication
 		private void btnBuy_Click(object sender, EventArgs e)
 		{
 			string msgErr = string.Empty;
-
-			bool buyLicense = QueryData.CreateBuyLicense(session.UserID, licenseItem1.LicenseTypeChoose, configObjectDAO, session.UserIp, out msgErr);
+			int dueDays;
+			bool buyLicense = QueryData.CreateBuyLicense(session.UserID, licenseItem1.LicenseTypeChoose, configObjectDAO, session.UserIp, out dueDays, out msgErr);
 			if (!buyLicense)
 			{
 				MessageBox.Show(msgErr);
 				return;
 			}
+			session.IsExpired = false;
+			session.UsedEndDate = DateTimeUtil.AddDateTime(dueDays);
+			licenseItem1.Session = session;
 		}
 		#endregion
 
@@ -154,7 +164,7 @@ namespace TestApllication
 			loginItem1.Visible = false;
 			licenseItem1.Visible = true;
 			licenseItem1.OnClickInput += btnInputLicense_Click;
-			licenseItem1.OnClickBuy += btnInputLicense_Click;
+			licenseItem1.OnClickBuy += btnBuy_Click;
 			licenseItem1.Session = session;
 		}
 

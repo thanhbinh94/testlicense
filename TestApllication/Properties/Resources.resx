@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="ConnectionString" xml:space="preserve">
-    <value>Data Source=localhost\Test_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;</value>
+    <value>Data Source=BINHLT\TEST_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;</value>
   </data>
   <data name="DataLogCommon" xml:space="preserve">
     <value>COMMON</value>
