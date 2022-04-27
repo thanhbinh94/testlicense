@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="ConnectionString" xml:space="preserve">
-    <value>Data Source=BINHLT\TEST_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;</value>
+    <value>Data Source=localhost\Test_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;</value>
   </data>
   <data name="DataLogCommon" xml:space="preserve">
     <value>COMMON</value>
@@ -162,14 +162,32 @@
   <data name="MSG_ERR_013" xml:space="preserve">
     <value>Mua license thất bại: Lỗi không xác định</value>
   </data>
+  <data name="MSG_ERR_014" xml:space="preserve">
+    <value>Đăng ký license thất bại: Hãy nhập license có tồn tại trong hệ thống</value>
+  </data>
+  <data name="MSG_ERR_015" xml:space="preserve">
+    <value>Đăng ký license thất bại: License được nhập đã được sử dụng bởi tài khoản khác</value>
+  </data>
+  <data name="MSG_ITEM_001" xml:space="preserve">
+    <value>dùng thử</value>
+  </data>
+  <data name="MSG_ITEM_002" xml:space="preserve">
+    <value>đã mua</value>
+  </data>
   <data name="MSG_LIC_INFO_001" xml:space="preserve">
-    <value>License của bạn còn thời hạn trong {0} ngày</value>
+    <value>Tài khoản của bạn là bản {0}. License của bạn còn thời hạn trong {1} ngày</value>
   </data>
   <data name="MSG_LIC_INFO_002" xml:space="preserve">
     <value>License của bạn đã hết hạn</value>
   </data>
   <data name="MSG_LIC_INFO_003" xml:space="preserve">
     <value>Tài khoản của bạn đã nhập quá số lần quy định và đã bị khóa</value>
+  </data>
+  <data name="MSG_LIC_INFO_004" xml:space="preserve">
+    <value>Tài khoản của bạn không đăng nhập trên đúng địa chỉ IP đã đăng ký. Bạn không thể sử dụng các chức năng của phiên bản license</value>
+  </data>
+  <data name="MSG_LIC_INFO_005" xml:space="preserve">
+    <value>Tài khoản của bạn chưa có license</value>
   </data>
   <data name="Schema" xml:space="preserve">
     <value>dbo</value>

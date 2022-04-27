@@ -19,7 +19,7 @@ namespace TestApllication.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -61,7 +61,7 @@ namespace TestApllication.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Data Source=BINHLT\TEST_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;.
+        ///   Looks up a localized string similar to Data Source=localhost\Test_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;.
         /// </summary>
         internal static string ConnectionString {
             get {
@@ -196,7 +196,43 @@ namespace TestApllication.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to License của bạn còn thời hạn trong {0} ngày.
+        ///   Looks up a localized string similar to Đăng ký license thất bại: Hãy nhập license có tồn tại trong hệ thống.
+        /// </summary>
+        internal static string MSG_ERR_014 {
+            get {
+                return ResourceManager.GetString("MSG_ERR_014", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Đăng ký license thất bại: License được nhập đã được sử dụng bởi tài khoản khác.
+        /// </summary>
+        internal static string MSG_ERR_015 {
+            get {
+                return ResourceManager.GetString("MSG_ERR_015", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to dùng thử.
+        /// </summary>
+        internal static string MSG_ITEM_001 {
+            get {
+                return ResourceManager.GetString("MSG_ITEM_001", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to đã mua.
+        /// </summary>
+        internal static string MSG_ITEM_002 {
+            get {
+                return ResourceManager.GetString("MSG_ITEM_002", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tài khoản của bạn là bản {0}. License của bạn còn thời hạn trong {1} ngày.
         /// </summary>
         internal static string MSG_LIC_INFO_001 {
             get {
@@ -219,6 +255,24 @@ namespace TestApllication.Properties {
         internal static string MSG_LIC_INFO_003 {
             get {
                 return ResourceManager.GetString("MSG_LIC_INFO_003", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tài khoản của bạn không đăng nhập trên đúng địa chỉ IP đã đăng ký. Bạn không thể sử dụng các chức năng của phiên bản license.
+        /// </summary>
+        internal static string MSG_LIC_INFO_004 {
+            get {
+                return ResourceManager.GetString("MSG_LIC_INFO_004", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tài khoản của bạn chưa có license.
+        /// </summary>
+        internal static string MSG_LIC_INFO_005 {
+            get {
+                return ResourceManager.GetString("MSG_LIC_INFO_005", resourceCulture);
             }
         }
         

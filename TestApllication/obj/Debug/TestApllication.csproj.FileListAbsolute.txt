@@ -45,3 +45,4 @@ D:\Project\Untilities\C-Shaft\testlicense\TestApllication\obj\Debug\TestApllicat
 D:\Project\Untilities\C-Shaft\testlicense\TestApllication\obj\Debug\TestApllication.MainForm.resources
 D:\Project\Untilities\C-Shaft\testlicense\TestApllication\obj\Debug\TestApllication.Properties.Resources.resources
 D:\Project\Untilities\C-Shaft\testlicense\TestApllication\obj\Debug\TestApllication.csproj.GenerateResource.Cache
+E:\Data\Work\C# Solution\TestApllication\testlicense\TestApllication\obj\Debug\TestApllication.csproj.SuggestedBindingRedirects.cache

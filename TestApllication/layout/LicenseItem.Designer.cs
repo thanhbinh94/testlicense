@@ -23,20 +23,31 @@ namespace TestApllication.layout
 			set
 			{
 				session = new Session(value);
-				if (session.IsLocked)
+				if (session.IsLocked != null && (bool)session.IsLocked)
                 {
 					lblLicenseStatus.Text = Resources.MSG_LIC_INFO_003;
 					pnBuy.Visible = false;
 				}
-				else if (session.IsExpired)
+				else if (session.IsLockedIp != null && (bool)session.IsLockedIp)
+				{
+					lblLicenseStatus.Text = Resources.MSG_LIC_INFO_004;
+					pnBuy.Visible = false;
+				}
+				else if (session.IsExpired != null && (bool)session.IsExpired)
 				{
 					lblLicenseStatus.Text = Resources.MSG_LIC_INFO_002;
 					pnBuy.Visible = true;
 					SetDataForLicenseTypeDrop();
 				}
+				else if (session.LicenseKey == null)
+                {
+					lblLicenseStatus.Text = Resources.MSG_LIC_INFO_005;
+					pnBuy.Visible = true;
+					SetDataForLicenseTypeDrop();
+				}
 				else
 				{
-					lblLicenseStatus.Text = string.Format(Resources.MSG_LIC_INFO_001, DateTimeUtil.GetDaysRemain(DateTime.Today, session.UsedEndDate));
+					lblLicenseStatus.Text = string.Format(Resources.MSG_LIC_INFO_001, (bool)session.IsTrialMode? Resources.MSG_ITEM_001 : Resources.MSG_ITEM_002, DateTimeUtil.GetDaysRemain(DateTime.Today, (DateTime) session.UsedEndDate));
 					pnBuy.Visible = false;
 				}
 			}
