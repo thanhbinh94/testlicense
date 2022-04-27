@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="ConnectionString" xml:space="preserve">
-    <value>Data Source=localhost\Test_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;</value>
+    <value>Data Source=BINHLT\TEST_DB;Initial Catalog=COMMON;User ID=sa;Password=Administrator@;</value>
   </data>
   <data name="DataLogCommon" xml:space="preserve">
     <value>COMMON</value>
@@ -181,13 +181,16 @@
     <value>License của bạn đã hết hạn</value>
   </data>
   <data name="MSG_LIC_INFO_003" xml:space="preserve">
-    <value>Tài khoản của bạn đã nhập quá số lần quy định và đã bị khóa</value>
+    <value>Tài khoản hoặc địa chỉ IP của bạn đã nhập quá số lần quy định và đã bị khóa</value>
   </data>
   <data name="MSG_LIC_INFO_004" xml:space="preserve">
     <value>Tài khoản của bạn không đăng nhập trên đúng địa chỉ IP đã đăng ký. Bạn không thể sử dụng các chức năng của phiên bản license</value>
   </data>
   <data name="MSG_LIC_INFO_005" xml:space="preserve">
     <value>Tài khoản của bạn chưa có license</value>
+  </data>
+  <data name="MSG_LIC_INFO_006" xml:space="preserve">
+    <value>Địa chỉ IP của bạn đã nhập quá số lần quy định và đã bị khóa</value>
   </data>
   <data name="Schema" xml:space="preserve">
     <value>dbo</value>

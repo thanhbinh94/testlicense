@@ -16,7 +16,10 @@ namespace TestApllication
         public MainForm()
         {
             InitializeComponent();
-            licenseItem1.Visible = false;
+			loginItem1.Visible = true;
+			loginItem1.OnLogin += btnLogin_Click;
+			loginItem1.OnCreateAccount += btnCreateAcc_Click;
+			licenseItem1.Visible = false;
             configObjectDAO = QueryData.GetConfigObject();
         }
 
@@ -31,13 +34,13 @@ namespace TestApllication
                 return;
             }
             DataTable dt = new DataTable();
-            bool loginCheck = QueryData.LoginCheck(loginItem1.txtInpUserId.Text, loginItem1.txtInpPass.Text, "127.0.0.1", out dt, out msgErr);
+            bool loginCheck = QueryData.LoginCheck(loginItem1.UserIdInp, loginItem1.PasswordInp, "127.0.0.1", out dt, out msgErr);
             if (!loginCheck)
             {
                 MessageBox.Show(msgErr);
                 return;
             }
-            SetSessionInfo(dt);
+            SetSessionInfo(dt, true);
             SwitchToMain(session);
         }
 
@@ -51,7 +54,7 @@ namespace TestApllication
                 return;
             }
 
-            bool createAcc = QueryData.CreateAccount(loginItem1.txtInpUserId.Text, loginItem1.txtInpPass.Text, "127.0.0.1", configObjectDAO, out msgErr);
+            bool createAcc = QueryData.CreateAccount(loginItem1.UserIdInp, loginItem1.PasswordInp, "127.0.0.1", configObjectDAO, out msgErr);
             if (!createAcc)
             {
                 MessageBox.Show(msgErr);
@@ -59,45 +62,59 @@ namespace TestApllication
             }
 
             DataTable dt = new DataTable();
-            bool loginCheck = QueryData.LoginCheck(loginItem1.txtInpUserId.Text, loginItem1.txtInpPass.Text, "127.0.0.1", out dt, out msgErr);
+            bool loginCheck = QueryData.LoginCheck(loginItem1.UserIdInp, loginItem1.PasswordInp, "127.0.0.1", out dt, out msgErr);
             if (!loginCheck)
             {
                 MessageBox.Show(msgErr);
                 return;
             }
-            SetSessionInfo(dt);
+            SetSessionInfo(dt, true);
             SwitchToMain(session);
         }
 
         private void btnInputLicense_Click(object sender, EventArgs e)
         {
-            bool validate = ValidateDataLicense(out string msgErr);
+			string msgErr;
+			bool validate = ValidateDataLicense(out msgErr);
             if (!validate)
             {
                 MessageBox.Show(msgErr);
                 return;
             }
 
-            bool inputLicense = QueryData.CreateInputLicense(session.UserID, licenseItem1.LicenseKeyInput, licenseItem1.LicenseKeyInput, session.UserIp, out msgErr);
+			DataTable dtLicInfo;
+            bool inputLicense = QueryData.CreateInputLicense(session.UserID, session.UserIp, licenseItem1.LicenseKeyInput, out dtLicInfo, out msgErr);
             if (!inputLicense)
             {
                 MessageBox.Show(msgErr);
-                _ = QueryData.CheckInputTimesAndLock(session.UserID, session.UserIp, configObjectDAO.ConfigMaxInputTimes, ActionTypeEnum.ChangeInput, out bool isLocked, out _);
+                bool isLocked = QueryData.CheckInputTimesAndLock(session.UserID, session.UserIp, configObjectDAO.ConfigMaxInputTimes, ActionTypeEnum.ChangeInput, out msgErr);
+				if (!string.IsNullOrEmpty(msgErr))
+				{
+					MessageBox.Show(msgErr);
+					return;
+				}
                 session.IsLocked = isLocked;
-                licenseItem1.Session = session;
-                return;
             }
-        }
+			else
+			{
+				SetSessionInfo(dtLicInfo, false);
+			}
+
+			licenseItem1.Session = session;
+		}
 
         private void btnBuy_Click(object sender, EventArgs e)
         {
             string msgErr = string.Empty;
-            bool buyLicense = QueryData.CreateBuyLicense(session.UserID, licenseItem1.LicenseTypeChoose, configObjectDAO, session.UserIp, out int dueDays, out string licenseKeyGen, out msgErr);
+			int dueDays;
+			string licenseKeyGen;
+			bool buyLicense = QueryData.CreateBuyLicense(session.UserID, licenseItem1.LicenseTypeChoose, configObjectDAO, session.UserIp, out dueDays, out licenseKeyGen, out msgErr);
             if (!buyLicense)
             {
                 MessageBox.Show(msgErr);
                 return;
             }
+			session.IsTrialMode = false;
             session.IsExpired = false;
             session.UsedEndDate = DateTimeUtil.AddDateTime(dueDays);
             session.LicenseKey = licenseKeyGen;
@@ -108,8 +125,8 @@ namespace TestApllication
         #region private method
         private bool ValidateDataLogin(ActionTypeEnum actionType, out string msgErr)
         {
-            msgErr = String.Empty;
-            if (string.IsNullOrEmpty(loginItem1.txtInpUserId.Text) || string.IsNullOrEmpty(loginItem1.txtInpPass.Text))
+            msgErr = string.Empty;
+            if (string.IsNullOrEmpty(loginItem1.UserIdInp) || string.IsNullOrEmpty(loginItem1.PasswordInp))
             {
                 msgErr = (actionType == ActionTypeEnum.Login) ? Resources.MSG_ERR_005 : Resources.MSG_ERR_007;
                 return false;
@@ -119,7 +136,7 @@ namespace TestApllication
 
         private bool ValidateDataLicense(out string msgErr)
         {
-            msgErr = String.Empty;
+            msgErr = string.Empty;
             if (string.IsNullOrEmpty(licenseItem1.LicenseKeyInput))
             {
                 msgErr = Resources.MSG_ERR_008;
@@ -137,37 +154,50 @@ namespace TestApllication
             licenseItem1.Session = session;
         }
 
-        private void SetSessionInfo(DataTable dtLogin)
+        private void SetSessionInfo(DataTable dtInfo, bool needCheckLock)
         {
             session = new Session();
-            session.UserID = dtLogin.Rows[0]["USER_ID"].ToString();
+			if (dtInfo.Rows[0]["USER_ID"] != DBNull.Value)
+			{
+				session.UserID = dtInfo.Rows[0]["USER_ID"].ToString();
+			}
             // Hardcode
             session.UserIp = "127.0.0.1";
-            if (dtLogin.Rows[0]["IS_LOCKED_IP"] != DBNull.Value)
+            if (dtInfo.Rows[0]["IS_LOCKED_IP"] != DBNull.Value)
             {
-                session.IsLockedIp = (bool)dtLogin.Rows[0]["IS_LOCKED_IP"];
+                session.IsLockedIp = (bool)dtInfo.Rows[0]["IS_LOCKED_IP"];
             }
-            if (dtLogin.Rows[0]["IS_TRIAL_MODE"] != DBNull.Value)
+            if (dtInfo.Rows[0]["IS_TRIAL_MODE"] != DBNull.Value)
             {
-                session.IsTrialMode = (bool)dtLogin.Rows[0]["IS_TRIAL_MODE"];
+                session.IsTrialMode = (bool)dtInfo.Rows[0]["IS_TRIAL_MODE"];
             }
-            if (dtLogin.Rows[0]["LICENSE_KEY"] != DBNull.Value)
+            if (dtInfo.Rows[0]["LICENSE_KEY"] != DBNull.Value)
             {
-                session.LicenseKey = dtLogin.Rows[0]["LICENSE_KEY"].ToString();
+                session.LicenseKey = dtInfo.Rows[0]["LICENSE_KEY"].ToString();
             }
-            if (dtLogin.Rows[0]["USED_END_DATE"] != DBNull.Value)
+            if (dtInfo.Rows[0]["USED_END_DATE"] != DBNull.Value)
             {
-                session.UsedEndDate = (DateTime)dtLogin.Rows[0]["USED_END_DATE"];
+                session.UsedEndDate = (DateTime)dtInfo.Rows[0]["USED_END_DATE"];
             }
-            if (dtLogin.Rows[0]["IS_EXPIRED"] != DBNull.Value)
+            if (dtInfo.Rows[0]["IS_EXPIRED"] != DBNull.Value)
             {
-                session.IsExpired = (bool)dtLogin.Rows[0]["IS_EXPIRED"];
+                session.IsExpired = (bool)dtInfo.Rows[0]["IS_EXPIRED"];
             }
             session.ConfigObjectDAO = configObjectDAO;
 
-            _ = QueryData.CheckInputTimesAndLock(session.UserID, session.UserIp, configObjectDAO.ConfigMaxInputTimes, null, out bool isLocked, out _);
-            session.IsLocked = isLocked;
-        }
+			if (needCheckLock)
+			{
+				string msgErr;
+				bool isLocked = QueryData.CheckInputTimesAndLock(session.UserID, session.UserIp, configObjectDAO.ConfigMaxInputTimes, null, out msgErr);
+				if (!string.IsNullOrEmpty(msgErr))
+				{
+					MessageBox.Show(msgErr);
+					return;
+				}
+				session.IsLocked = isLocked;
+			}
+			licenseItem1.Session = session;
+		}
 
         //private void GetIpAddress(out string userip)
         //{

@@ -33,7 +33,7 @@ namespace TestApllication.DatabaseAcess
 					SqlDataReader dr = cm.ExecuteReader();
 					if (dr.Read())
 					{
-						dt = MakeDataTableLogin();
+						dt = MakeSessionDataTable();
 
 						dt.BeginInit();
 						DataRow dRow = dt.NewRow();
@@ -72,23 +72,17 @@ namespace TestApllication.DatabaseAcess
 								dr2.Close();
 							}
 
-							string getLicenseInfoQuery = GetLicenseInfoQuery();
-							cm = new SqlCommand(getLicenseInfoQuery, cn);
-							cm.CommandTimeout = 120;
-							cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 50).Value = DBValueConvert.ToNvarchar(EncryptUtil.DecryptASCIIStringFromBase64(licenseHash));
-
-							SqlDataReader dr3 = cm.ExecuteReader();
-							if (dr3.Read())
+							DataTable dtLicInfo = GetLicenseInfo(EncryptUtil.DecryptASCIIStringFromBase64(licenseHash), cn, null, out msgErr);
+							if (dtLicInfo != null && dtLicInfo.Rows.Count > 0)
 							{
 								dt.BeginLoadData();
-								dt.Rows[0]["LICENSE_KEY"] = dr3["LICENSE_KEY"].ToString();
-								dt.Rows[0]["IS_EXPIRED"] = StringUtil.ToBoolValue(dr3["IS_EXPIRED"].ToString());
-								dt.Rows[0]["USED_END_DATE"] = (DateTime)dr3["USED_END_DATE"];
-								dt.Rows[0]["IS_TRIAL_MODE"] = StringUtil.ToBoolValue(dr3["IS_TRIAL"].ToString());
+								dt.Rows[0]["LICENSE_KEY"] = dtLicInfo.Rows[0]["LICENSE_KEY"].ToString();
+								dt.Rows[0]["IS_EXPIRED"] = StringUtil.ToBoolValue(dtLicInfo.Rows[0]["IS_EXPIRED"].ToString());
+								dt.Rows[0]["USED_END_DATE"] = (DateTime)dtLicInfo.Rows[0]["USED_END_DATE"];
+								dt.Rows[0]["IS_TRIAL_MODE"] = StringUtil.ToBoolValue(dtLicInfo.Rows[0]["IS_TRIAL"].ToString());
 								dt.EndLoadData();
 								dt.AcceptChanges();
 							}
-							dr3.Close();
 						}
 						return true;
 					}
@@ -107,28 +101,26 @@ namespace TestApllication.DatabaseAcess
 			}
 		}
 
-		public static string GetLicenseTypeId(SqlConnection cn, SqlTransaction str)
+		public static DataTable GetLicenseTypeId(SqlConnection cn, SqlTransaction str)
         {
+			DataTable dt = new DataTable();
 			string GetLicenseTypeIDQuery = GetLicenseTypeByTrialQuery();
 			SqlCommand cm = new SqlCommand(GetLicenseTypeIDQuery, cn, str);
 			cm.CommandTimeout = 120;
 			cm.Parameters.Add("@isTrial", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(true);
-			SqlDataReader dr = cm.ExecuteReader();
+			SqlDataAdapter da = new SqlDataAdapter(cm);
 			try
 			{
-				if (dr.Read())
-				{
-					return dr["LICENSE_TYPE_ID"].ToString();
-				}
-				return string.Empty;
+				da.Fill(dt);
+				return dt;
 			}
 			catch (SqlException)
 			{
-				return string.Empty;
+				return null;
 			}
 			finally
 			{
-				dr.Close();
+				da.Dispose();
 			}
 		}
 
@@ -149,7 +141,6 @@ namespace TestApllication.DatabaseAcess
 					SqlDataReader dr = cm.ExecuteReader();
 					if (dr.Read())
 					{
-						configObjectDAO.ConfigTrialDueDays = int.Parse(dr["TRIAL_DUE_DAYS"].ToString());
 						configObjectDAO.ConfigNumberDigitPerUnit = int.Parse(dr["CONFIG_NUM_DIGIT_PER_UNIT"].ToString());
 						configObjectDAO.ConfigNumberOfUnit = int.Parse(dr["CONFIG_NUM_UNIT"].ToString());
 						configObjectDAO.ConfigLicenseSuffix = dr["CONFIG_LICENSE_SUFFIX"].ToString();
@@ -242,16 +233,16 @@ namespace TestApllication.DatabaseAcess
 
 					#region Create license
 					string licenseKeyGen = GenerateLicenseKey(configObjectDAO);
-					string licenseTypeId = GetLicenseTypeId(cn, str);
+					DataTable dtTrialLic = GetLicenseTypeId(cn, str);
 
 					string createLicenseQuery = CreateLicenseQuery();
 					cm = new SqlCommand(createLicenseQuery, cn, str);
 					cm.CommandTimeout = 120;
 					cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKeyGen);
-					cm.Parameters.Add("@licenseType", SqlDbType.NVarChar, 10).Value = DBValueConvert.ToNvarchar(licenseTypeId);
+					cm.Parameters.Add("@licenseType", SqlDbType.NVarChar, 10).Value = DBValueConvert.ToNvarchar(dtTrialLic.Rows[0]["LICENSE_TYPE_ID"].ToString());
 					cm.Parameters.Add("@isUsed", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(true);
 					cm.Parameters.Add("@usedStartDate", SqlDbType.DateTime).Value = DateTime.Now;
-					cm.Parameters.Add("@usedEndDate", SqlDbType.DateTime).Value = DateTimeUtil.AddDateTime(configObjectDAO.ConfigTrialDueDays);
+					cm.Parameters.Add("@usedEndDate", SqlDbType.DateTime).Value = DateTimeUtil.AddDateTime((int)dtTrialLic.Rows[0]["LICENSE_DUE_DAYS"]);
 					cm.Parameters.Add("@isExpired", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(false);
 
 					cm.ExecuteNonQuery();
@@ -290,10 +281,11 @@ namespace TestApllication.DatabaseAcess
 			}
 		}
 
-		public static bool CreateInputLicense(string userId, string userIp, string licenseKey, string ipAdress, out string msgErr)
+		public static bool CreateInputLicense(string userId, string userIp, string licenseKey, out DataTable dt, out string msgErr)
 		{
 			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
 			{
+				dt = MakeSessionDataTable();
 				msgErr = string.Empty;
 				cn.Open();
 				SqlTransaction str = cn.BeginTransaction();
@@ -318,7 +310,7 @@ namespace TestApllication.DatabaseAcess
                     #region Check exists User-License Mapping
                     string checkExistUserLicense = CheckExistUserLicenseMappingByLicenseQuery();
 					string licenseKeyHash = EncryptUtil.EncryptASCIIStringToBase64(licenseKey);
-					cm = new SqlCommand(checkExistLicense, cn, str);
+					cm = new SqlCommand(checkExistUserLicense, cn, str);
 					cm.CommandTimeout = 120;
 					cm.Parameters.Add("@licenseKeyHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(licenseKeyHash);
 					count = (int)cm.ExecuteScalar();
@@ -329,7 +321,39 @@ namespace TestApllication.DatabaseAcess
 					}
 					#endregion
 
+					#region Update license used
+					string licenseTypeId = GetLicenseTypeId(licenseKey, cn, str, out msgErr);
+					if (string.IsNullOrEmpty(licenseTypeId))
+					{
+						return false;
+					}
+
+					int licenseDueDays = GetDueDaysByLicenseTypeId(licenseTypeId, cn, str, out msgErr);
+					if (licenseDueDays == -1)
+					{
+						return false;
+					}
+
+					string updateLicenseUsedQuery = UpdateLicenseUsedQuery();
+					cm = new SqlCommand(updateLicenseUsedQuery, cn, str);
+					cm.Parameters.Add("@isUsed", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(true);
+					cm.Parameters.Add("@usedStartDate", SqlDbType.DateTime).Value = DateTime.Now;
+					cm.Parameters.Add("@usedEndDate", SqlDbType.DateTime).Value = DateTimeUtil.AddDateTime(licenseDueDays);
+					cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKey);
+
+					cm.ExecuteNonQuery();
+					#endregion
+
 					#region Create user-license mapping
+					// Delete old data mapping
+					string userIdHash = EncryptUtil.EncryptASCIIStringToBase64(userId);
+					string deleteUserLicenseMapppingQuery = DeleteUserLicenseMappingQuery();
+					cm = new SqlCommand(deleteUserLicenseMapppingQuery, cn, str);
+					cm.Parameters.Add("@userIdHash", SqlDbType.NVarChar, 200).Value = DBValueConvert.ToNvarchar(userIdHash);
+					cm.CommandTimeout = 120;
+
+					cm.ExecuteNonQuery();
+
 					string createUserLicenseMapppingQuery = CreateUserLicenseMappingQuery();
 					cm = new SqlCommand(createUserLicenseMapppingQuery, cn, str);
 					cm.CommandTimeout = 120;
@@ -340,6 +364,23 @@ namespace TestApllication.DatabaseAcess
 
 					cm.ExecuteNonQuery();
 					#endregion
+					str.Commit();
+					DataTable dtLicInfo = GetLicenseInfo(licenseKey, cn, null, out msgErr);
+					if (dtLicInfo != null && dtLicInfo.Rows.Count > 0)
+					{
+						dt.BeginInit();
+						DataRow dRow = dt.NewRow();
+						dRow["USER_ID"] = userId;
+						dRow["IS_TRIAL_MODE"] = StringUtil.ToBoolValue(dtLicInfo.Rows[0]["IS_TRIAL"].ToString());
+						dRow["IS_LOCKED_IP"] = false;
+						dRow["LICENSE_KEY"] = dtLicInfo.Rows[0]["LICENSE_KEY"].ToString();
+						dRow["IS_EXPIRED"] = StringUtil.ToBoolValue(dtLicInfo.Rows[0]["IS_EXPIRED"].ToString());
+						dRow["USED_END_DATE"] = (DateTime)dtLicInfo.Rows[0]["USED_END_DATE"];
+						dt.Rows.Add(dRow);
+						dt.EndInit();
+						dt.AcceptChanges();
+					}
+
 					return true;
 				}
 				catch (SqlException ex)
@@ -430,59 +471,118 @@ namespace TestApllication.DatabaseAcess
 			}
 		}
 
-		public static int CheckInputTimesAndLock(string userId, string ipAdress, int maxInputTimes, ActionTypeEnum? actionType, out bool isLocked, out string msgErr)
+		public static bool CheckInputTimesAndLock(string userId, string ipAdress, int maxInputTimes, ActionTypeEnum? actionType, out string msgErr)
         {
 			using (SqlConnection cn = new SqlConnection(DBAccess.ConnectionString))
 			{
-				isLocked = false;
 				msgErr = string.Empty;
 				cn.Open();
 				SqlTransaction str = cn.BeginTransaction();
-				int currentInputTimes = GetCurrentInputTimes(userId, ipAdress, cn, str, out msgErr);
-				if (currentInputTimes == maxInputTimes)
-                {
-					isLocked = true;
-					msgErr = Resources.MSG_LIC_INFO_003;
-					return -1;
+				#region Check user input
+				int userInputTimes = 0;
+				bool isLocked = false;
+				DataTable dtUserInp = IsUserInputLocked(userId, cn, str, out msgErr);
+				if (dtUserInp != null && dtUserInp.Rows.Count > 0)
+				{
+					bool canParse = int.TryParse(dtUserInp.Rows[0]["INPUT_TIMES"].ToString(), out userInputTimes);
+					if (!canParse)
+					{
+						msgErr = Resources.MSG_ERR_012;
+						return false;
+					}
+					if (dtUserInp.Rows[0]["IS_LOCKED"] != null)
+					{
+						isLocked = (bool)StringUtil.ToBoolValue(dtUserInp.Rows[0]["IS_LOCKED"].ToString());
+						if (isLocked) return true;
+					}
 				}
+				#endregion
+
+				#region Check ip input
+				int ipInputTimes = 0;
+				DataTable dtIpInp = IsIpInputLocked(ipAdress, cn, str, out msgErr);
+				if (dtIpInp != null && dtIpInp.Rows.Count > 0)
+				{
+					bool canParse = int.TryParse(dtIpInp.Rows[0]["INPUT_TIMES"].ToString(), out ipInputTimes);
+					if (!canParse)
+					{
+						msgErr = Resources.MSG_ERR_012;
+						return false;
+					}
+					if (dtIpInp.Rows[0]["IS_LOCKED"] != null)
+					{
+						isLocked = (bool)StringUtil.ToBoolValue(dtIpInp.Rows[0]["IS_LOCKED"].ToString());
+						if (isLocked) return true;
+					}
+				}
+				#endregion
+
 				if (actionType == ActionTypeEnum.ChangeInput)
                 {
 					try
 					{
-						if (currentInputTimes == 0)
+						#region User input
+						if (userInputTimes == 0)
 						{
-							string createInputLicense = CreateInputLicenseQuery();
+							string createInputLicense = CreateUserInputLicenseQuery();
 							SqlCommand cm = new SqlCommand(createInputLicense, cn, str);
 							cm.CommandTimeout = 120;
 							cm.Parameters.Add("@userId", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(userId);
-							cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(ipAdress);
 							cm.Parameters.Add("@inputTimes", SqlDbType.Int).Value = 1;
-							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = "1";
+							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = "0";
 
 							cm.ExecuteNonQuery();
 						}
 						else
 						{
-							string updateInputLicense = UpdateInputTimesAndLockedQuery();
+							string updateInputLicense = UpdateUserInputQuery();
 							SqlCommand cm = new SqlCommand(updateInputLicense, cn, str);
 							cm.CommandTimeout = 120;
-							currentInputTimes += 1;
+							userInputTimes += 1;
 							cm.Parameters.Add("@userId", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(userId);
-							cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(ipAdress);
-							cm.Parameters.Add("@inputTimes", SqlDbType.Int).Value = currentInputTimes;
-							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = currentInputTimes == maxInputTimes ? "1" : "0";
+							cm.Parameters.Add("@inputTimes", SqlDbType.Int).Value = userInputTimes;
+							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(userInputTimes > maxInputTimes);
 
 							cm.ExecuteNonQuery();
-							msgErr = Resources.MSG_LIC_INFO_003;
-							isLocked = true;
-							return -1;
 						}
+						#endregion
+
+						#region Ip input
+						if (ipInputTimes == 0)
+						{
+							string createInputLicense = CreateIpInputLicenseQuery();
+							SqlCommand cm = new SqlCommand(createInputLicense, cn, str);
+							cm.CommandTimeout = 120;
+							cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(ipAdress);
+							cm.Parameters.Add("@inputTimes", SqlDbType.Int).Value = 1;
+							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = "0";
+
+							cm.ExecuteNonQuery();
+						}
+						else
+						{
+							string updateInputLicense = UpdateIpInputQuery();
+							SqlCommand cm = new SqlCommand(updateInputLicense, cn, str);
+							cm.CommandTimeout = 120;
+							ipInputTimes += 1;
+							cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(ipAdress);
+							cm.Parameters.Add("@inputTimes", SqlDbType.Int).Value = userInputTimes;
+							cm.Parameters.Add("@isLocked", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(ipInputTimes > maxInputTimes);
+
+							cm.ExecuteNonQuery();
+
+						}
+						#endregion
 						str.Commit();
+
+						// Check if max after insert/update
+						return (userInputTimes > maxInputTimes || ipInputTimes > maxInputTimes);
 					}
-					catch (SqlException)
+					catch (SqlException ex)
 					{
+						str.Rollback();
 						msgErr = Resources.MSG_ERR_012;
-						return -1;
+						return false;
 					}
                     finally
                     {
@@ -490,8 +590,62 @@ namespace TestApllication.DatabaseAcess
 						cn.Close();
                     }
 				}
-				return currentInputTimes;
+				return isLocked;
 			}
+		}
+
+		public static DataTable IsIpInputLocked(string ipAdress, SqlConnection cn, SqlTransaction str, out string msgErr)
+        {
+			//ipInputTimes = -1;
+			//bool isLocked = true;
+			DataTable dt = new DataTable();
+			msgErr = string.Empty;
+			string getInputTimes = GetIpInputTimesQuery();
+			SqlCommand cm = new SqlCommand(getInputTimes, cn, str);
+			cm.CommandTimeout = 120;
+			cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(ipAdress);
+			//SqlDataReader dr = cm.ExecuteReader();
+			SqlDataAdapter da = new SqlDataAdapter(cm);
+			try
+			{
+				da.Fill(dt);
+			}
+			catch (SqlException)
+			{
+				msgErr = Resources.MSG_ERR_011;
+				return null;
+			}
+			finally
+			{
+				da.Dispose();
+			}
+			return dt;
+		}
+
+		public static DataTable IsUserInputLocked(string userId, SqlConnection cn, SqlTransaction str, out string msgErr)
+		{
+			DataTable dt = new DataTable();
+			msgErr = string.Empty;
+			string getInputTimes = GetUserInputTimesQuery();
+			SqlCommand cm = new SqlCommand(getInputTimes, cn, str);
+			cm.CommandTimeout = 120;
+			cm.Parameters.Add("@userId", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(userId);
+			//SqlDataReader dr = cm.ExecuteReader();
+			SqlDataAdapter da = new SqlDataAdapter(cm);
+			try
+			{
+				da.Fill(dt);
+			}
+			catch (SqlException)
+			{
+				msgErr = Resources.MSG_ERR_011;
+				return null;
+			}
+			finally
+			{
+				da.Dispose();
+			}
+			return dt;
 		}
 
 		public static int GetDueDaysByLicenseTypeId(string licenseType, SqlConnection cn, SqlTransaction str, out string msgErr)
@@ -519,30 +673,62 @@ namespace TestApllication.DatabaseAcess
 			return value;
 		}
 
-		public static int GetCurrentInputTimes(string userId, string ipAdress, SqlConnection cn, SqlTransaction str, out string msgErr)
-        {
-			string getInputTimes = GetInputTimesByUserAndIpQuery();
-			int value = 0;
+		public static string GetLicenseTypeId(string licenseKey, SqlConnection cn, SqlTransaction str, out string msgErr)
+		{
+			string getLicenseTypeByLicenseQuery = GetLicenseTypeByLicenseQuery();
+			string value = string.Empty;
 			msgErr = string.Empty;
-			SqlCommand cm = new SqlCommand(getInputTimes, cn, str);
+			SqlCommand cm = new SqlCommand(getLicenseTypeByLicenseQuery, cn, str);
 			cm.CommandTimeout = 120;
-			cm.Parameters.Add("@userId", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(userId);
-			cm.Parameters.Add("@ipAdress", SqlDbType.NVarChar, 1).Value = DBValueConvert.ToNvarchar(ipAdress);
+			cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKey);
 			try
 			{
 				SqlDataReader dr = cm.ExecuteReader();
 				if (dr.Read())
 				{
-					value = int.Parse(dr["INPUT_TIMES"].ToString());
+					value = dr["LICENSE_TYPE_ID"].ToString();
 				}
 				dr.Close();
 			}
 			catch (SqlException)
 			{
-				msgErr = Resources.MSG_ERR_011;
-				return -1;
+				msgErr = Resources.MSG_ERR_010;
+				return null;
 			}
 			return value;
+		}
+
+		public static DataTable GetLicenseInfo(string licenseKey, SqlConnection cn, SqlTransaction str, out string msgErr)
+		{
+			DataTable dt = new DataTable();
+			string getDueDaysByLicenseTypeIdQuery = GetLicenseInfoQuery();
+			msgErr = string.Empty;
+			SqlCommand cm;
+			if (str != null)
+			{
+				cm = new SqlCommand(getDueDaysByLicenseTypeIdQuery, cn, str);
+			}
+			else
+			{
+				cm = new SqlCommand(getDueDaysByLicenseTypeIdQuery, cn);
+			}
+			cm.CommandTimeout = 120;
+			cm.Parameters.Add("@licenseKey", SqlDbType.NVarChar, 30).Value = DBValueConvert.ToNvarchar(licenseKey);
+			SqlDataAdapter da = new SqlDataAdapter(cm);
+			try
+			{
+				da.Fill(dt);
+			}
+			catch (SqlException)
+			{
+				msgErr = Resources.MSG_ERR_010;
+				return null;
+			}
+			finally
+			{
+				da.Dispose();
+			}
+			return dt;
 		}
 		#endregion
 
@@ -581,9 +767,18 @@ namespace TestApllication.DatabaseAcess
 		private static string GetLicenseTypeByTrialQuery()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append("SELECT LICENSE_TYPE_ID FROM ");
+			sb.Append("SELECT LICENSE_TYPE_ID, LICENSE_DUE_DAYS FROM ");
 			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE_TYPE] ");
 			sb.Append("WHERE IS_TRIAL = @isTrial");
+			return sb.ToString();
+		}
+
+		private static string GetLicenseTypeByLicenseQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("SELECT LICENSE_TYPE_ID FROM ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE] ");
+			sb.Append("WHERE LICENSE_KEY = @licenseKey");
 			return sb.ToString();
 		}
 
@@ -611,7 +806,7 @@ namespace TestApllication.DatabaseAcess
 			StringBuilder sb = new StringBuilder();
 			sb.Append("SELECT COUNT(*) FROM ");
 			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE] ");
-			sb.Append("WHERE LICENSE_KEY = @licenseKey");
+			sb.Append("WHERE LICENSE_KEY = @licenseKey AND IS_USED = '0'");
 			return sb.ToString();
 		}
 
@@ -627,7 +822,7 @@ namespace TestApllication.DatabaseAcess
 		private static string GetConfigQuery()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append("SELECT TRIAL_DUE_DAYS, CONFIG_NUM_DIGIT_PER_UNIT, CONFIG_NUM_UNIT, CONFIG_LICENSE_SUFFIX, CONFIG_MAX_INPUT_TIMES FROM ");
+			sb.Append("SELECT CONFIG_NUM_DIGIT_PER_UNIT, CONFIG_NUM_UNIT, CONFIG_LICENSE_SUFFIX, CONFIG_MAX_INPUT_TIMES FROM ");
 			sb.Append(DBAccess.DBCommonSchema).Append(".[CONFIG] ");
 			sb.Append("WHERE CONFIG_ID = @configID");
 			return sb.ToString();
@@ -642,12 +837,21 @@ namespace TestApllication.DatabaseAcess
 			return sb.ToString();
 		}
 
-		private static string GetInputTimesByUserAndIpQuery()
+		private static string GetUserInputTimesQuery()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append("SELECT INPUT_TIMES FROM ");
-			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_TIMES] ");
-			sb.Append("WHERE USER_ID = @userId AND IP_ADDRESS = @ipAdress");
+			sb.Append("SELECT INPUT_TIMES, IS_LOCKED FROM ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_USER_LICENSE] ");
+			sb.Append("WHERE USER_ID = @userId");
+			return sb.ToString();
+		}
+
+		private static string GetIpInputTimesQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("SELECT INPUT_TIMES, IS_LOCKED FROM ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_IP_LICENSE] ");
+			sb.Append("WHERE IP_ADDRESS = @ipAdress");
 			return sb.ToString();
 		}
 
@@ -656,7 +860,7 @@ namespace TestApllication.DatabaseAcess
 			StringBuilder sb = new StringBuilder();
 			sb.Append("INSERT INTO ");
 			sb.Append(DBAccess.DBCommonSchema).Append(".[USER_INFORMATION] ");
-			sb.Append("VALUES (@userid, @password, @passwordhash, '0', GETDATE())");
+			sb.Append("VALUES (@userid, @password, @passwordhash, GETDATE())");
 			return sb.ToString();
 		}
 
@@ -678,23 +882,54 @@ namespace TestApllication.DatabaseAcess
 			return sb.ToString();
 		}
 
-		private static string CreateInputLicenseQuery()
+		private static string CreateUserInputLicenseQuery()
 		{
 			StringBuilder sb = new StringBuilder();
 			sb.Append("INSERT INTO ");
-			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_LICENSE] ");
-			sb.Append("VALUES (@userId, @ipAdress, @inputTimes, @isLocked)");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_USER_LICENSE] ");
+			sb.Append("VALUES (@userId, @inputTimes, @isLocked)");
 			return sb.ToString();
 		}
 
-		private static string UpdateInputTimesAndLockedQuery()
+		private static string CreateIpInputLicenseQuery()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append("UPDATE TABLE ");
-			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_LICENSE] ");
+			sb.Append("INSERT INTO ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_IP_LICENSE] ");
+			sb.Append("VALUES (@ipAdress, @inputTimes, @isLocked)");
+			return sb.ToString();
+		}
+
+		private static string UpdateLicenseUsedQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("UPDATE ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[LICENSE] ");
 			sb.Append("SET ");
-			sb.Append("INPUT_TIMES = @inputTimes, IS_LOCKED = @isLock ");
-			sb.Append("WHERE USER_ID = @userId AND IP_ADDRESS = @ipAdress");
+			sb.Append("IS_USED = @isUsed, USED_START_DATE = @usedStartDate, USED_END_DATE = @usedEndDate ");
+			sb.Append("WHERE LICENSE_KEY = @licenseKey");
+			return sb.ToString();
+		}
+
+		private static string UpdateUserInputQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("UPDATE ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_USER_LICENSE] ");
+			sb.Append("SET ");
+			sb.Append("INPUT_TIMES = @inputTimes, IS_LOCKED = @isLocked ");
+			sb.Append("WHERE USER_ID = @userId");
+			return sb.ToString();
+		}
+
+		private static string UpdateIpInputQuery()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("UPDATE ");
+			sb.Append(DBAccess.DBCommonSchema).Append(".[INPUT_IP_LICENSE] ");
+			sb.Append("SET ");
+			sb.Append("INPUT_TIMES = @inputTimes, IS_LOCKED = @isLocked ");
+			sb.Append("WHERE IP_ADDRESS = @ipAdress");
 			return sb.ToString();
 		}
 
@@ -729,7 +964,7 @@ namespace TestApllication.DatabaseAcess
 			return sb.ToString();
 		}
 
-		private static DataTable MakeDataTableLogin()
+		private static DataTable MakeSessionDataTable()
 		{
 			DataTable dt = new DataTable();
 
