@@ -17,8 +17,8 @@ namespace TestApllication
         {
             InitializeComponent();
 			loginItem1.Visible = true;
-			loginItem1.OnLogin += btnLogin_Click;
-			loginItem1.OnCreateAccount += btnCreateAcc_Click;
+			loginItem1.Login += btnLogin_Click;
+			loginItem1.CreateAccount += btnCreateAcc_Click;
 			licenseItem1.Visible = false;
             configObjectDAO = QueryData.GetConfigObject();
         }
@@ -27,6 +27,11 @@ namespace TestApllication
         private void btnLogin_Click(object sender, EventArgs e)
         {
             string msgErr = string.Empty;
+			// Nếu có nhiều control cùng sử dụng 1 button Login và 1 EventHandler như này
+			//if (sender is layout.LoginItem)
+			//{
+
+			//}
             bool validate = ValidateDataLogin(ActionTypeEnum.Login, out msgErr);
             if (!validate)
             {

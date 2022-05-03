@@ -88,7 +88,7 @@
 			this.btnCreateAcc.TabIndex = 5;
 			this.btnCreateAcc.Text = "Create account";
 			this.btnCreateAcc.UseVisualStyleBackColor = true;
-			this.btnCreateAcc.Click += new System.EventHandler(this.btnCreateAcc_Click);
+			this.btnCreateAcc.Click += new System.EventHandler(this.OnCreateAccount);
 			// 
 			// btnLogin
 			// 
@@ -98,7 +98,7 @@
 			this.btnLogin.TabIndex = 4;
 			this.btnLogin.Text = "Login";
 			this.btnLogin.UseVisualStyleBackColor = true;
-			this.btnLogin.Click += new System.EventHandler(this.btnLogin_Click);
+			this.btnLogin.Click += new System.EventHandler(this.OnLogin);
 			// 
 			// txtInpPass
 			// 

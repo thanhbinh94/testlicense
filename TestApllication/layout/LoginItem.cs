@@ -7,8 +7,8 @@ namespace TestApllication.layout
     public partial class LoginItem : UserControl
     {
 		#region Properties
-		public EventHandler OnLogin;
-		public EventHandler OnCreateAccount;
+		public EventHandler Login;
+		public EventHandler CreateAccount;
 		#endregion
 
 		public LoginItem()
@@ -17,14 +17,14 @@ namespace TestApllication.layout
         }
 
 		#region Event
-		private void btnLogin_Click(object sender, EventArgs e)
+		protected virtual void OnLogin(object sender, EventArgs e)
 		{
-			OnLogin?.Invoke(this, e);
+			Login?.Invoke(this, e);
 		}
 
-		private void btnCreateAcc_Click(object sender, EventArgs e)
+		protected virtual void OnCreateAccount(object sender, EventArgs e)
 		{
-			OnCreateAccount?.Invoke(this, e);
+			CreateAccount?.Invoke(this, e);
 		}
 		#endregion
 	}
